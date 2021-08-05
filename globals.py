@@ -8,3 +8,4 @@ bd_url = ''
 bd_apitoken = ''
 bd_trustcert = False
 fail_on_policies = []
+polsevs = ['UNSPECIFIED', 'TRIVIAL', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER', ]

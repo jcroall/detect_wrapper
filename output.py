@@ -7,9 +7,9 @@ from dominate.util import raw
 from dominate.tags import *
 from tabulate import tabulate
 
-import plotly.graph_objects as go
+import data
 
-polsevs = ['UNSPECIFIED', 'TRIVIAL', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER', ]
+import plotly.graph_objects as go
 
 colors = px.colors.qualitative.Plotly
 seccolors = px.colors.qualitative.Light24
@@ -20,7 +20,7 @@ seccolors = px.colors.qualitative.Light24
 #     fig2 = create_summary_compfig(comps, lcomps)
 
 
-def create_summary_vulnfig(vulns):
+def create_summary_vulnfig(vulns, title):
     import tempfile
 
     df = pd.json_normalize(vulns)
@@ -36,14 +36,14 @@ def create_summary_vulnfig(vulns):
 
     fig = go.Figure()
     if len(df.index) == 0:
-        return fig
+        return ''
 
     vulndf = df.drop_duplicates(subset=["vulnerabilityWithRemediation.vulnerabilityName"],
                                 keep="first", inplace=False)
 
     vulndf = vulndf[vulndf[
-                'vulnerabilityWithRemediation.remediationStatus'].isin(['NEW', 'NEEDS_REVIEW', 'REMEDIATION_REQUIRED'])
-             ].sort_values(by=['vulnerabilityWithRemediation.overallScore'], ascending=False)
+        'vulnerabilityWithRemediation.remediationStatus'].isin(['NEW', 'NEEDS_REVIEW', 'REMEDIATION_REQUIRED'])
+    ].sort_values(by=['vulnerabilityWithRemediation.overallScore'], ascending=False)
 
     df = vulndf.reset_index()
 
@@ -60,7 +60,7 @@ def create_summary_vulnfig(vulns):
                 annotations.append(
                     dict(xref='x', yref='y',
                          x=indent + vulns_secrisk[x] / 2,
-                         y='Vulnerabilities',
+                         y=title,
                          text=x[0],
                          font=dict(family='Arial', size=12, color='rgb(0, 0, 0)'),
                          showarrow=False)
@@ -71,7 +71,7 @@ def create_summary_vulnfig(vulns):
 
         fig.add_trace(
             go.Bar(
-                y=['Vulnerabilities'],
+                y=[title],
                 x=[val],
                 name=x,
                 orientation='h',
@@ -88,30 +88,30 @@ def create_summary_vulnfig(vulns):
     try:
         with tempfile.NamedTemporaryFile(suffix=".html", delete=False) as v:
             fname = v.name
-        pio.write_html(fig, file=fname, auto_open=False)
+        pio.write_html(fig, file=fname, auto_open=False, full_html=False)
         with open(fname) as myfile:
-            data = myfile.read()
+            htmldata = myfile.read()
         myfile.close()
     except Exception as e:
         print("ERROR: Unable to write temporary output HTML file\n" + str(e))
         return ''
-    return data
+    return htmldata
 
 
 def create_summary_compfig(comps, lcomps):
     compdata = pd.json_normalize(comps)
     lcompdata = pd.json_normalize(lcomps)
-                   
+
     fig = go.Figure()
     colseq = [seccolors[1], seccolors[6], seccolors[7], seccolors[23], seccolors[0]]
 
     if len(compdata.index) == 0:
-        return fig
+        return ''
 
     count_inviolation = len(compdata[(compdata['policyStatus'] == 'IN_VIOLATION') &
-                            (compdata['ignored'] == False)].index)
+                                     (compdata['ignored'] == False)].index)
     count_notinviolation = len(compdata[(compdata['policyStatus'] == 'NOT_IN_VIOLATION') &
-                               (compdata['ignored'] == False)].index)
+                                        (compdata['ignored'] == False)].index)
 
     count_reviewed = len(compdata[(compdata['reviewStatus'] == 'REVIEWED') &
                                   (compdata['ignored'] == False)].index)
@@ -120,9 +120,9 @@ def create_summary_compfig(comps, lcomps):
 
     if len(lcompdata.index) > 0:
         lcount_inviolation = len(lcompdata[(lcompdata['policyStatus'] == 'IN_VIOLATION') &
-                                (lcompdata['ignored'] == False)].index)
+                                           (lcompdata['ignored'] == False)].index)
         lcount_notinviolation = len(lcompdata[(lcompdata['policyStatus'] == 'NOT_IN_VIOLATION') &
-                                   (lcompdata['ignored'] == False)].index)
+                                              (lcompdata['ignored'] == False)].index)
 
     count_ignored = len(compdata[compdata['ignored']].index)
     count_notignored = len(compdata[compdata['ignored'] == False].index)
@@ -282,7 +282,7 @@ def create_summary_compfig(comps, lcomps):
     if count_notinviolation > 0:
         annotations.append(
             dict(xref='x', yref='y',
-                 x=count_notinviolation/2,
+                 x=count_notinviolation / 2,
                  y='Component Policies',
                  text='No Violation',
                  font=dict(family='Arial', size=14,
@@ -302,7 +302,7 @@ def create_summary_compfig(comps, lcomps):
     if count_notinviolation > 0:
         annotations.append(
             dict(xref='x', yref='y',
-                 x=count_notinviolation + count_inviolation/2,
+                 x=count_notinviolation + count_inviolation / 2,
                  y='Component Policies',
                  text='In Violation',
                  font=dict(family='Arial', size=14,
@@ -322,7 +322,7 @@ def create_summary_compfig(comps, lcomps):
     if count_reviewed > 0:
         annotations.append(
             dict(xref='x', yref='y',
-                 x=count_reviewed/2,
+                 x=count_reviewed / 2,
                  y='Components Reviewed',
                  text='Reviewed',
                  font=dict(family='Arial', size=14,
@@ -342,7 +342,7 @@ def create_summary_compfig(comps, lcomps):
     if count_notreviewed > 0:
         annotations.append(
             dict(xref='x', yref='y',
-                 x=count_reviewed + count_notreviewed/2,
+                 x=count_reviewed + count_notreviewed / 2,
                  y='Review Status',
                  text='Not Reviewed',
                  font=dict(family='Arial', size=14,
@@ -362,7 +362,7 @@ def create_summary_compfig(comps, lcomps):
     if count_notignored > 0:
         annotations.append(
             dict(xref='x', yref='y',
-                 x=count_notignored/2,
+                 x=count_notignored / 2,
                  y='Components Ignored',
                  text='Not Ignored',
                  font=dict(family='Arial', size=14,
@@ -382,7 +382,7 @@ def create_summary_compfig(comps, lcomps):
     if count_ignored > 0:
         annotations.append(
             dict(xref='x', yref='y',
-                 x=count_notignored + count_ignored/2,
+                 x=count_notignored + count_ignored / 2,
                  y='Components Ignored',
                  text='Ignored',
                  font=dict(family='Arial', size=14,
@@ -410,17 +410,19 @@ def create_summary_compfig(comps, lcomps):
 def output_junit_vulns(bdurl, output, vulns):
     f = open(output, "w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
-    <testsuites disabled="" errors="" failures="" tests="" time="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="junit.xsd">
-    <testsuite disabled="" errors="" failures="" hostname="" id="" name="Black Duck vulnerability status" package="" skipped="" tests="" time="" timestamp=""
+    <testsuites disabled="" errors="" failures="" tests="" time="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:noNamespaceSchemaLocation="junit.xsd">
+    <testsuite disabled="" errors="" failures="" hostname="" id="" name="Black Duck vulnerability status" package="" 
+    skipped="" tests="" time="" timestamp=""
     <properties><property name="" value=""/></properties>''')
 
     for vuln in vulns:
         f.write("<testcase name='{} - {}'><error message='Vulnerability :".format(
-            vuln['vulnerabilityWithRemediation']['severity'],
-            vuln['vulnerabilityWithRemediation']['vulnerabilityName'],
-            vuln['vulnerabilityWithRemediation']['vulnerabilityName'],
+            vuln['sev'],
+            vuln['vulnid'],
+            vuln['vulnid'],
         ))
-        f.write("- Severity = " + vuln['vulnerabilityWithRemediation']['severity'])
+        f.write("- Severity = " + vuln['sev'])
         f.write("- Score = {}".format(vuln['vulnerabilityWithRemediation']['overallScore']))
         f.write("- Status = " + vuln['vulnerabilityWithRemediation']['remediationStatus'])
         f.write("- Component = {}/{}".format(
@@ -429,7 +431,7 @@ def output_junit_vulns(bdurl, output, vulns):
         ))
         f.write("See {}/api/vulnerabilities/{}/overview".format(
             bdurl,
-            vuln['vulnerabilityWithRemediation']['vulnerabilityName'],
+            vuln['vulnid'],
         ))
         f.write("'></error></testcase>")
     #
@@ -444,8 +446,10 @@ def output_junit_vulns(bdurl, output, vulns):
 def output_junit_pols(bdurl, output, pols):
     f = open(output, "w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
-    <testsuites disabled="" errors="" failures="" tests="" time="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="junit.xsd">
-    <testsuite disabled="" errors="" failures="" hostname="" id="" name="Black Duck policy status" package="" skipped="" tests="" time="" timestamp="">
+    <testsuites disabled="" errors="" failures="" tests="" time="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="junit.xsd">
+    <testsuite disabled="" errors="" failures="" hostname="" id="" name="Black Duck policy status" package="" skipped=""
+    tests="" time="" timestamp="">
     <properties><property name="" value=""/></properties>''')
 
     for polname in pols.keys():
@@ -472,8 +476,10 @@ def output_junit_pols(bdurl, output, pols):
 def output_junit_comps(bdurl, output, comps, cp_list):
     f = open(output, "w")
     f.write('''<?xml version="1.0" encoding="UTF-8"?>
-    <testsuites disabled="" errors="" failures="" tests="" time="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="junit.xsd">
-    <testsuite disabled="" errors="" failures="" hostname="" id="" name="Black Duck components" package="" skipped="" tests="" time="" timestamp="">
+    <testsuites disabled="" errors="" failures="" tests="" time="" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:noNamespaceSchemaLocation="junit.xsd">
+    <testsuite disabled="" errors="" failures="" hostname="" id="" name="Black Duck components" package="" skipped="" 
+    tests="" time="" timestamp="">
     <properties><property name="" value=""/></properties>''')
 
     for comp in comps:
@@ -499,7 +505,6 @@ def output_junit_comps(bdurl, output, comps, cp_list):
 #     table = [["spam",42],["eggs",451],["bacon",0]]
 #     headers = ["item", "qty"]
 #     return tabulate(table, headers, tablefmt="html")
-
 
 
 def output_console_report(comps, vulns, pols, latestcomps, latestvulns, latestpols):
@@ -611,83 +616,80 @@ def create_table(data, hdrs, fmt):
     return outtab
 
 
-def get_vuln_counts(vulns, latestvulns):
-    vulncounts = {
-        'CRITICAL': 0,
-        'HIGH': 0,
-        'MEDIUM': 0,
-        'LOW': 0
-    }
-    for vuln in vulns:
-        sev = vuln['vulnerabilityWithRemediation']['severity']
-        vulncounts[sev] += 1
+def output_html_report(fname,
+                       comps, lcomps, topcomps, newcomps,
+                       vulns, lvulns, topvulns,
+                       proj, ver, pvurl, title, last_scan):
+    d = document(title='Black Duck OSS Report - {}/{} {}'.format(proj, ver, title))
 
-    lvulncounts = {
-        'CRITICAL': 0,
-        'HIGH': 0,
-        'MEDIUM': 0,
-        'LOW': 0
-    }
-    for lvuln in latestvulns:
-        sev = lvuln['vulnerabilityWithRemediation']['severity']
-        lvulncounts[sev] += 1
-
-    return [
-        ['In Full Project', vulncounts['CRITICAL'], vulncounts['HIGH'], vulncounts['MEDIUM'], vulncounts['LOW'], ],
-        ['Added in Latest Scan', lvulncounts['CRITICAL'], lvulncounts['HIGH'], lvulncounts['MEDIUM'], lvulncounts['LOW'], ],
-    ]
-
-
-def get_comp_counts(comps, latestcomps):
-    comps_violation = 0
-    for comp in comps:
-        if comp['policyStatus'] == 'IN_VIOLATION':
-            comps_violation += 1
-
-    lcomps_violation = 0
-    lcomplist = []
-    lcomplist_violation = []
-    for comp in latestcomps:
-        lcomplist.append(comp['componentName'] + '/' + comp['componentVersionName'])
-        if comp['policyStatus'] == 'IN_VIOLATION':
-            lcomps_violation += 1
-            lcomplist_violation.append(comp['componentName'] + '/' + comp['componentVersionName'])
-
-    return [
-        ['In Full Project', len(comps), comps_violation],
-        ['Added in Latest Scan', len(lcomplist), lcomps_violation],
-    ]
-
-
-def output_html_report(fname, comps, lcomps, topcomps, vulns, lvulns, topvulns, proj, ver, pvurl, title):
-    d = document()
+    with d.head:
+        style('''
+        table, th, td{
+          border: 1px solid black;
+          border-collapse: collapse;
+          padding: 4px;
+          text-align: left;
+        }
+        tr:hover {background-color: #F5F5F5;}
+        th {
+          background-color: #4B0082;
+          color: white;
+        }
+        h1, h2, h3 {
+          font-family: Arial, sans-serif;
+        }
+        h2 {
+            background-color: #9370DB;
+        }''')
     d += h1('Project: {} - Version: {}'.format(proj, ver))
-    d += raw(create_table(get_comp_counts(comps, lcomps), ['COMPONENTS', 'Total', 'In Violation'], 'html'))
+    d += h2('COMPONENTS')
+    d += raw(create_table(data.get_comp_counts(comps, lcomps), ['Scope', 'Total', 'In Violation'], 'html'))
     d += br()
 
-    newcomplist = topcomps
-    for j in newcomplist:
-        del j['polsev']
-        del j['vulnsev']
+    if len(newcomps) > 0 and last_scan:
+        t = []
+        for j in newcomps:
+            t.append([j['compname'], j['pols'], j['vulns'], j['matches_direct']])
+        d += h3('Added Components - Direct Matches 10')
+        d += raw(create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'html'))
+    else:
+        d += h3('Added Components - Direct Matches')
+        d += p('None')
 
-    t = []
-    for c in newcomplist:
-        t.append(list(c.values()))
-    d += raw(create_table(t, ['Top 10 Comps w. Issues ' + title, 'Policies', 'Top Vulns'], 'html'))
+    if len(topcomps) > 0:
+        t = []
+        for j in topcomps:
+            t.append([j['compname'], j['pols'], j['vulns'], j['matches']])
+        d += h3('Top 10 Components with Issues ' + title)
+        d += raw(create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'html'))
+    else:
+        d += h3('Top 10 Components with Issues' + title)
+        d += p('None')
+
     d += br()
+    d += h2('VULNERABILITIES')
+    d += raw(create_table(data.get_vuln_counts(vulns, lvulns),
+                          ['Scope', 'CRIT', 'HIGH', 'MED', 'LOW'], 'html'))
 
-    d += raw(create_table(get_vuln_counts(vulns, lvulns),
-                                  ['VULNERABILITIES', 'CRIT', 'HIGH', 'MED', 'LOW'],
-                                  'html'))
-
-    d += raw(create_summary_vulnfig(vulns))
+    if len(vulns) > 0:
+        if last_scan:
+            barname = 'Vulnerabilities ' + title
+            d += raw(create_summary_vulnfig(lvulns, barname))
+        else:
+            barname = 'All Vulnerabilities'
+            d += raw(create_summary_vulnfig(vulns, barname))
 
     newvulnlist = topvulns
     t = []
     for v in newvulnlist:
         t.append(list(v.values()))
     d += br()
-    d += raw(create_table(t, ['Top 10 Vulns ' + title, 'Score', 'Comps', 'Description'], 'html'))
+    if len(topvulns) > 0:
+        d += h3('Top 10 Vulnerabilities ' + title)
+        d += raw(create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], 'html'))
+    else:
+        d += h3('Top 10 Vulnerabilities ' + title)
+        d += p('None')
 
     f = open(fname, "w")
     f.write(d.render())
@@ -695,9 +697,13 @@ def output_html_report(fname, comps, lcomps, topcomps, vulns, lvulns, topvulns, 
     print("INFO: HTML report written to file '{}'".format(fname))
 
 
-def output_text_report(fname, comps, lcomps, topcomps, vulns, lvulns, topvulns, proj, ver, pvurl, title):
+def output_text_report(fname,
+                       comps, lcomps, topcomps,
+                       newcomps, vulns, lvulns,
+                       topvulns, proj, ver, pvurl, title,
+                       lastscan):
     text = '\nProject: {} - Version: {}\n\n'.format(proj, ver)
-    text += create_table(get_comp_counts(comps, lcomps), ['COMPONENTS', 'Total', 'In Violation'], 'simple')
+    text += create_table(data.get_comp_counts(comps, lcomps), ['COMPONENTS', 'Total', 'In Violation'], 'simple')
 
     newcomplist = topcomps
     for j in newcomplist:
@@ -711,7 +717,7 @@ def output_text_report(fname, comps, lcomps, topcomps, vulns, lvulns, topvulns, 
         t.append(list(d.values()))
     text += '\n\n' + create_table(t, ['Top 10 Comps w. Issues ' + title, 'Policies', 'Top Vulns'], 'simple')
 
-    text += '\n\n' + create_table(get_vuln_counts(vulns, lvulns),
+    text += '\n\n' + create_table(data.get_vuln_counts(vulns, lvulns),
                                   ['VULNERABILITIES', 'CRIT', 'HIGH', 'MED', 'LOW'],
                                   'simple')
 
@@ -732,93 +738,3 @@ def output_text_report(fname, comps, lcomps, topcomps, vulns, lvulns, topvulns, 
         print("INFO: Text report written to file '{}'".format(fname))
     else:
         print(text)
-
-
-def get_top10_comps(vulns, comps, pols):
-    comprecs = []
-    for comp in comps:
-        comprec = {
-            'compname': '',
-            'pols': [],
-            'polsev': 0,
-            'vulns': [],
-            'vulnsev': 0,
-        }
-        compname = comp['componentName'] + '/' + comp['componentVersionName']
-        comprec['compname'] = compname
-        for polname in pols.keys():
-            pol = pols[polname]
-            if compname in pol['comps']:
-                comprec['pols'].append(pol['name'] + ' (' + pol['polsev'][:3] + ')')
-                polind = polsevs.index(pol['polsev'])
-                if polind > comprec['polsev']:
-                    comprec['polsev'] = polind
-
-        if len(comprec['pols']) > 2:
-            comprec['pols'] = '{} + {} more'.format(','.join(comprec['pols'][:2]), len(comprec['pols']) - 2)
-        else:
-            comprec['pols'] = '{}'.format(','.join(comprec['pols'][:2]))
-
-        for vuln in vulns:
-            vcomp = vuln['componentName'] + '/' + vuln['componentVersionName']
-            if compname == vcomp:
-                vulnname = vuln['vulnerabilityWithRemediation']['vulnerabilityName'] + ' (' + \
-                          vuln['vulnerabilityWithRemediation']['severity'][0] + ')'
-                comprec['vulns'].append(vulnname)
-                vulnscore = vuln['vulnerabilityWithRemediation']['overallScore']
-                if vulnscore > comprec['vulnsev']:
-                    comprec['vulnsev'] = vulnscore
-        if len(comprec['vulns']) > 2:
-            comprec['vulns'] = '{} + {} more'.format(','.join(comprec['vulns'][:2]), len(comprec['vulns']) - 2)
-        else:
-            comprec['vulns'] = '{}'.format(','.join(comprec['vulns'][:2]))
-
-        comprecs.append(comprec)
-
-    def get_sev(c):
-        sev = (c.get('polsev') * 10) + c.get('vulnsev')
-        return sev
-
-    # sort by name (Ascending order)
-    comprecs.sort(key=get_sev, reverse=True)
-    return comprecs[:10]
-
-
-def get_top10_vulns(vulns):
-    vulnrecs = []
-    vulnidlist = []
-    for vuln in vulns:
-        vulnid = vuln['vulnerabilityWithRemediation']['vulnerabilityName']
-        vcomp = vuln['componentName'] + '/' + vuln['componentVersionName']
-        vdesc = vuln['vulnerabilityWithRemediation']['description']
-        vsev = vuln['vulnerabilityWithRemediation']['overallScore']
-        if vulnid not in vulnidlist:
-            vulnrecs.append(
-                {
-                    'vulnid': vulnid,
-                    'sev': vsev,
-                    'comps': [vcomp],
-                    'desc': vdesc,
-                }
-            )
-            vulnidlist.append(vulnid)
-        else:
-            ind = vulnidlist.index(vulnid)
-            vulnrecs[ind]['comps'].append(vcomp)
-            if vsev > vulnrecs[ind]['sev']:
-                vulnrecs[ind]['sev'] = vsev
-
-    for vuln in vulnrecs:
-        if len(vuln['comps']) > 2:
-            vuln['comps'] = '{} + {} more'.format(','.join(vuln['comps'][:2]), len(vuln['comps'])-2)
-        else:
-            vuln['comps'] = '{}'.format(','.join(vuln['comps'][:2]))
-
-    def get_sev(c):
-        sev = c.get('sev')
-        return sev
-
-    # sort by name (Ascending order)
-    vulnrecs.sort(key=get_sev, reverse=True)
-    return vulnrecs[:10]
-

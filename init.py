@@ -91,20 +91,28 @@ def check_options():
         if opt == '--wrapper.detect7':
             pass
         elif opt == '--wrapper.last_scan_only':
+            print('INFO: detect_wrapper - Will report on last scan data only')
             globals.last_scan_only = True
         elif opt == '--wrapper.report_text':
+            print('INFO: detect_wrapper - Will output text report in console')
             globals.report_text = True
         elif opt.find('--wrapper.report_html') == 0:
             globals.report_html = opt[len('--wrapper.report_html='):]
+            print('INFO: detect_wrapper - Will output HTML report to file {}'.format(globals.report_html))
         elif opt.find('--wrapper.junit_xml=') == 0:
             globals.junit_xml = opt[len('--wrapper.junit_xml='):]
+            print('INFO: detect_wrapper - Will output Junit XML results to file {}'.format(globals.junit_xml))
         elif opt.find('--wrapper.junit_type=') == 0:
             globals.junit_type = opt[len('--wrapper.junit_type='):]
             if globals.junit_type not in junit_type_list:
-                print("ERROR: Junit type '{}' not in supported list ()".format(globals.junit_type, ','.join(junit_type_list)))
+                print("ERROR: detect_wrapper - Junit type '{}' not in supported list ()".format(globals.junit_type, ','.join(junit_type_list)))
                 ret = False
+            else:
+                print('INFO: detect_wrapper - Will output Junit XML results for {}'.format(globals.junit_type))
         # elif opt.find('--output_sarif=') == 0:
         #     globals.output_sarif = opt[len('--output_sarif='):]
+        elif opt.find('--wrapper.') == 0:
+            print('WARNING: detect_wrapper - Wrapper option {} ignored'.format(opt))
         elif opt.find('--blackduck.url=') == 0:
             globals.bd_url = opt[len('--blackduck.url='):]
             args.append(opt)
@@ -115,7 +123,7 @@ def check_options():
             globals.bd_trustcert = True
             args.append(opt)
         elif opt == '--detect.blackduck.scan.mode=RAPID':
-            print("ERROR: RAPID scan mode not supported by detect_wrapper")
+            print("ERROR: detect_wrapper - RAPID scan mode not supported by detect_wrapper")
             ret = False
         elif opt.find('--detect.wait.for.results=') == 0:
             pass
@@ -129,12 +137,15 @@ def check_options():
             args.append(opt)
 
     wait_for_results = True
-    if globals.fail_on_policies != '' and not globals.last_scan_only:
-        wait_for_results = False
-        args.append('--detect.policy.check.fail.on.severities=' + globals.fail_on_policies)
-    else:
-        args.append('--detect.wait.for.results=true')
-        # args.append('--detect.cleanup=false')
+    if len(globals.fail_on_policies) > 0:
+        if not globals.last_scan_only:
+            wait_for_results = False
+            args.append('--detect.policy.check.fail.on.severities=' + ','.join(globals.fail_on_policies))
+        else:
+            args.append('--detect.wait.for.results=true')
+            print('INFO: detect_wrapper - Will fail on {} policies for last scan only'.format(
+                ','.join(globals.fail_on_policies)))
+            # args.append('--detect.cleanup=false')
 
     return ret, args
 
@@ -144,7 +155,7 @@ def init():
 
     prereqs = check_prereqs()
     if prereqs != "":
-        print("Prerequisite not met: {}".format(prereqs))
+        print("ERROR: detect_wrapper - Prerequisite not met: {}".format(prereqs))
         sys.exit(3)
 
     if os.getenv('BLACKDUCK_URL') is not None:
