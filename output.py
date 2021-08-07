@@ -617,7 +617,7 @@ def create_table(data, hdrs, fmt):
 
 
 def output_html_report(fname,
-                       comps, lcomps, topcomps, newcomps,
+                       comps, lcomps, topcomps, newcomps, comppols,
                        vulns, lvulns, topvulns,
                        proj, ver, pvurl, title, last_scan):
     d = document(title='Black Duck OSS Report - {}/{} {}'.format(proj, ver, title))
@@ -643,7 +643,7 @@ def output_html_report(fname,
         }''')
     d += h1('Project: {} - Version: {}'.format(proj, ver))
     d += h2('COMPONENTS')
-    d += raw(create_table(data.get_comp_counts(comps, lcomps), ['Scope', 'Total', 'In Violation'], 'html'))
+    d += raw(create_table(data.get_comp_counts(comps, lcomps, comppols), ['Scope', 'Total', 'In Violation'], 'html'))
     d += br()
 
     if len(newcomps) > 0 and last_scan:

@@ -109,7 +109,7 @@ def main():
     # time.sleep(20)
     allvulns = data.get_vulns(bd, pvurl)
     allcomps = data.get_comps(bd, pvurl)
-    allpols, comp_pol_list = data.get_pols(bd, allcomps)
+    allpols, comp_pol_list comp_polsevs = data.get_pols(bd, allcomps)
     latestvulns, latestcomps, latestpols = data.proc_journals(bd, pvurl, vername, now, allvulns, allcomps, allpols)
 
     if globals.last_scan_only:
@@ -140,7 +140,7 @@ def main():
 
     if globals.report_html != '':
         output.output_html_report(globals.report_html,
-                                  allcomps, latestcomps, topcomps, newcomps,
+                                  allcomps, latestcomps, topcomps, newcomps, comp_polsevs,
                                   allvulns, latestvulns, topvulns,
                                   projname, vername, pvurl, title, globals.last_scan_only)
 

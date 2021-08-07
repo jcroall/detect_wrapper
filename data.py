@@ -36,7 +36,7 @@ def get_comps(bd, pv):
     comps = bd.get_json(pv + '/components?limit=5000')
     newcomps = []
     for comp in comps['items']:
-        if comp['ignored'] == False:
+        if comp['ignored'] is False:
             newcomps.append(comp)
     return newcomps
 
@@ -44,14 +44,17 @@ def get_comps(bd, pv):
 def get_pols(bd, comps):
     pols_dict = {}
     comp_pol_list = {}
+    comp_polsevcount = {}
     complist = []
+    pollist = []
     for comp in comps:
         cname = comp['componentName'] + '/' + comp['componentVersionName']
         if cname in complist:
             continue
         complist.append(cname)
         compurl = comp['_meta']['href']
-        pollist = []
+        if cname not in comp_polsevcount.keys():
+            comp_polsevcount[cname] = [0, 0, 0, 0, 0, 0]
         if comp['policyStatus'] == 'IN_VIOLATION':
             comppols = bd.get_json(compurl + '/policy-rules')
             for comppol in comppols['items']:
@@ -68,12 +71,13 @@ def get_pols(bd, comps):
                     pols_dict[comppol['name']]['comps'].append(cname)
                     pols_dict[comppol['name']]['compurls'].append(comp['_meta']['href'])
 
+                comp_polsevcount[cname][globals.polsevs.index(comppol['severity'])] += 1
                 pollist.append(comppol['name'])
             comp_pol_list[compurl] = pollist
         else:
             comp_pol_list[compurl] = ''
 
-    return pols_dict, comp_pol_list
+    return pols_dict, comp_pol_list, comp_polsevcount
 
 
 def remove_vulns(vuln_comp_dict, component, vuln_list):
@@ -543,11 +547,13 @@ def get_top10_vulns(vulns):
     return vulnrecs[:10]
 
 
-def get_comp_counts(comps, latestcomps):
-    comps_violation = 0
+def get_comp_counts(comps, latestcomps, comppols):
+    polsevcounts = [0, 0, 0, 0, 0, 0]
     for comp in comps:
-        if comp['policyStatus'] == 'IN_VIOLATION':
-            comps_violation += 1
+        for ind in range(len(polsevcounts)):
+            polsevcounts[ind] += compols[comp][ind]
+        # if comp['policyStatus'] == 'IN_VIOLATION':
+        #     comps_violation += 1
 
     lcomps_violation = 0
     lcomplist = []
