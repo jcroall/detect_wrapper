@@ -11,7 +11,6 @@ from blackduck import Client
 
 def check_connection(url):
     # import subprocess
-
     try:
         r = requests.get(url, allow_redirects=True)
         if not r.ok:
@@ -90,9 +89,50 @@ def check_prereqs():
 def check_options():
     junit_type_list = ['vulns', 'pols', 'comps']
 
+    detect_opts = [
+        'blackduck.url',
+        'blackduck.api.token',
+        'blackduck.trust.cert',
+        'detect.blackduck.scan.mode',
+        'detect.offline.mode',
+        'detect.wait.for.results',
+        'blackduck.proxy.host',
+        'blackduck.proxy.port',
+        'detect.policy.check.fail.on.severities',
+    ]
+
     ret = True
     report = False
     args = []
+    proxy_host = ''
+    proxy_port = ''
+
+    for detopt in detect_opts:
+        envvar = detopt.upper().replace('.', '_')
+        envval = os.getenv(envvar)
+        if envval is not None:
+            if detopt == 'blackduck.url':
+                globals.bd_url = envval
+            elif detopt == 'blackduck.api.token':
+                globals.bd_apitoken = envval
+            elif detopt == 'blackduck.trust.cert=true':
+                globals.bd_trustcert = True
+            elif detopt == 'detect.blackduck.scan.mode':
+                if envval == 'RAPID':
+                    print("ERROR: detect_wrapper - RAPID scan mode not supported")
+                ret = False
+            elif detopt == 'detect.offline.mode':
+                print("ERROR: detect_wrapper - Offline scan not supported")
+                ret = False
+            elif detopt == 'blackduck.proxy.host':
+                proxy_host = envval
+            elif detopt == 'blackduck.proxy.port':
+                proxy_port = envval
+            elif detopt == '--detect.policy.check.fail.on.severities':
+                sevstr = envval
+                if sevstr != 'NONE':
+                    globals.fail_on_policies = sevstr.split(',')
+
     for opt in sys.argv[1:]:
         if opt == '--wrapper.detect7':
             pass
@@ -110,7 +150,9 @@ def check_options():
         elif opt.find('--wrapper.junit_type=') == 0:
             globals.junit_type = opt[len('--wrapper.junit_type='):]
             if globals.junit_type not in junit_type_list:
-                print("ERROR: detect_wrapper - Junit type '{}' not in supported list ()".format(globals.junit_type, ','.join(junit_type_list)))
+                print("ERROR: detect_wrapper - Junit type '{}' not in supported list ()".format(
+                        globals.junit_type,
+                        ','.join(junit_type_list)))
                 ret = False
         # elif opt.find('--output_sarif=') == 0:
         #     globals.output_sarif = opt[len('--output_sarif='):]
@@ -131,6 +173,12 @@ def check_options():
             ret = False
         elif opt.find('--detect.wait.for.results=') == 0:
             pass
+        elif opt.find('--blackduck.proxy.host=') == 0:
+            proxy_host = opt[len('--blackduck.proxy.host='):]
+            args.append(opt)
+        elif opt.find('--blackduck.proxy.port=') == 0:
+            proxy_port = opt[len('--blackduck.proxy.port='):]
+            args.append(opt)
         elif opt.find('--detect.policy.check.fail.on.severities=') == 0:
             sevstr = opt[len('--detect.policy.check.fail.on.severities='):]
             if sevstr != 'NONE':
@@ -140,23 +188,33 @@ def check_options():
         else:
             args.append(opt)
 
-    wait_for_results = True
     if globals.fail_on_policies != '' and not globals.last_scan_only and not report:
-        wait_for_results = False
         args.append('--detect.policy.check.fail.on.severities=' + ','.join(globals.fail_on_policies))
     else:
         args.append('--detect.wait.for.results=true')
         # args.append('--detect.cleanup=false')
 
-    if ret == False:
+    if ret is False:
         sys.exit(2)
+
+    if proxy_host != '' and proxy_host != '':
+        os.environ['HTTPS_PROXY'] = proxy_host + ':' + proxy_port
+    else:
+        proxy_env = ''
+        if os.getenv('HTTPS_PROXY') is not None or os.getenv('HTTP_PROXY') is not None:
+            if os.getenv('HTTPS_PROXY') is not None:
+                proxy_env = os.getenv('HTTPS_PROXY')
+            if os.getenv('HTTP_PROXY') is not None:
+                proxy_env = os.getenv('HTTP_PROXY')
+            proxy_host = ':'.join(proxy_env.split(':')[:2])
+            proxy_port = proxy_env.split(':')[2]
+            args.append('--blackduck.proxy.host=' + proxy_host)
+            args.append('--blackduck.proxy.port=' + proxy_port)
 
     return args
 
 
 def init():
-    config = {}
-
     prereqs = check_prereqs()
     if prereqs != "":
         print("Prerequisite not met: {}".format(prereqs))
@@ -169,10 +227,11 @@ def init():
     if os.getenv('BLACKDUCK_TRUST_CERT') is not None:
         globals.bd_apitoken = os.getenv('BLACKDUCK_API_TOKEN')
 
-    args =  check_options()
+    args = check_options()
 
     if globals.bd_url == '' or globals.bd_apitoken == '':
-        print('ERROR: detect_wrapper - No Black Duck server credentials supplied (--blackduck.url and --blackduck.api.token)')
+        print('ERROR: detect_wrapper - No Black Duck server credentials supplied (--blackduck.url and \
+--blackduck.api.token)')
         sys.exit(2)
     if not check_connection(globals.bd_url):
         print("ERROR: detect_wrapper - No connection to {} (Invalid URL or Proxy issue?)".format(globals.bd_url))
