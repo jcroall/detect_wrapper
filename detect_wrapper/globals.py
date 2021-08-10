@@ -11,6 +11,7 @@ bd_trustcert = False
 
 proxy_host = ''
 proxy_port = ''
+unsupported = False
 
 fail_on_policies = []
 polsevs = ['UNSPECIFIED', 'TRIVIAL', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER', ]

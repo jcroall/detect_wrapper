@@ -7,6 +7,18 @@ import requests
 from detect_wrapper import globals
 from blackduck import Client
 
+check_detect_opts = [
+    'blackduck.url',
+    'blackduck.api.token',
+    'blackduck.trust.cert',
+    'detect.blackduck.scan.mode',
+    'detect.offline.mode',
+    'detect.wait.for.results',
+    'blackduck.proxy.host',
+    'blackduck.proxy.port',
+    'detect.policy.check.fail.on.severities',
+]
+
 
 def check_connection(url):
     # import subprocess
@@ -88,128 +100,138 @@ def check_prereqs():
     return ""
 
 
-def check_options():
-    junit_type_list = ['vulns', 'pols', 'comps']
+def process_opt(opt, val):
+    use_opt = True
+    if opt.find('--') == 0:
+        opt = opt[2:]
 
-    detect_opts = [
-        'blackduck.url',
-        'blackduck.api.token',
-        'blackduck.trust.cert',
-        'detect.blackduck.scan.mode',
-        'detect.offline.mode',
-        'detect.wait.for.results',
-        'blackduck.proxy.host',
-        'blackduck.proxy.port',
-        'detect.policy.check.fail.on.severities',
-    ]
+    if opt == 'blackduck.url':
+        globals.bd_url = val
+    elif opt == 'blackduck.api.token':
+        globals.bd_apitoken = val
+    elif opt == 'blackduck.trust.cert':
+        if val == 'true':
+            globals.bd_trustcert = True
+    elif opt == 'detect.blackduck.scan.mode':
+        if val == 'RAPID':
+            print("ERROR: detect_wrapper - RAPID scan mode not supported")
+        globals.unsupported = True
+    elif opt == 'detect.offline.mode':
+        print("ERROR: detect_wrapper - Offline scan not supported")
+        globals.unsupported = True
+    elif opt == 'blackduck.proxy.host':
+        globals.proxy_host = val
+    elif opt == 'blackduck.proxy.port':
+        globals.proxy_port = val
+    elif opt == 'detect.policy.check.fail.on.severities':
+        if val != 'NONE':
+            globals.fail_on_policies = val.split(',')
+    elif opt == 'detect.wait.for.results':
+        use_opt = False
+    return use_opt
 
-    ret = True
-    report = False
-    args = []
-    proxy_host = ''
-    proxy_port = ''
 
-    for detopt in detect_opts:
+def check_envvars():
+    for detopt in check_detect_opts:
         envvar = detopt.upper().replace('.', '_')
         envval = os.getenv(envvar)
         if envval is not None:
-            if detopt == 'blackduck.url':
-                globals.bd_url = envval
-            elif detopt == 'blackduck.api.token':
-                globals.bd_apitoken = envval
-            elif detopt == 'blackduck.trust.cert=true':
-                globals.bd_trustcert = True
-            elif detopt == 'detect.blackduck.scan.mode':
-                if envval == 'RAPID':
-                    print("ERROR: detect_wrapper - RAPID scan mode not supported")
-                ret = False
-            elif detopt == 'detect.offline.mode':
-                print("ERROR: detect_wrapper - Offline scan not supported")
-                ret = False
-            elif detopt == 'blackduck.proxy.host':
-                proxy_host = envval
-            elif detopt == 'blackduck.proxy.port':
-                proxy_port = envval
-            elif detopt == '--detect.policy.check.fail.on.severities':
-                sevstr = envval
-                if sevstr != 'NONE':
-                    globals.fail_on_policies = sevstr.split(',')
+            process_opt(detopt, envval)
+    return
+
+
+def check_spring_config():
+    # Check for spring config file
+    optfile = ''
+    for opt in sys.argv[1:]:
+        if opt.find('--spring.profiles.active=') == 0:
+            optfile = 'application-{}.yml'.format(opt[len('--spring.profiles.active='):])
+            if not os.path.isfile(optfile):
+                print(os.getcwd())
+                optfile = ''
+            break
+
+    if optfile == '':
+        return
+
+    file1 = open(optfile, "r")
+    for line in file1:
+        if len(line.strip()) == 0 or line.strip().find('#') == 0:
+            # Comment line
+            continue
+        arr = line.strip().split(': ')
+        if len(arr) != 2:
+            continue
+        key = arr[0]
+        val = arr[1]
+        if key in check_detect_opts:
+            process_opt(key, val)
+    return
+
+
+def check_all_options():
+    junit_type_list = ['vulns', 'pols', 'comps']
+
+    report = False
+    args = []
+
+    check_spring_config()
+    check_envvars()
 
     for opt in sys.argv[1:]:
-        if opt == '--wrapper.detect7':
+        arr = opt.split('=')
+        key = ''
+        val = ''
+        if len(arr) >= 1:
+            key = arr[0]
+        if len(arr) >= 2:
+            val = '='.join(arr[1:])
+
+        if key == '--wrapper.detect7':
             pass
-        elif opt == '--wrapper.last_scan_only':
-            print('INFO: detect_wrapper - will report on last scan only')
+        elif key == '--wrapper.last_scan_only':
+            print('INFO: detect_wrapper - Will report on last scan only')
             globals.last_scan_only = True
-        elif opt == '--wrapper.report_text':
-            print('INFO: detect_wrapper - will output console report')
+        elif key == '--wrapper.report_text':
+            print('INFO: detect_wrapper - Will output console report')
             globals.report_text = True
             report = True
-        elif opt.find('--wrapper.report_html') == 0:
-            globals.report_html = opt[len('--wrapper.report_html='):]
-            print('INFO: detect_wrapper - will output report to HTML file {}'.format(globals.report_html))
+        elif key == '--wrapper.report_html':
+            globals.report_html = val
+            print('INFO: detect_wrapper - Will output report to HTML file {}'.format(globals.report_html))
             report = True
-        elif opt.find('--wrapper.junit_xml=') == 0:
-            globals.junit_xml = opt[len('--wrapper.junit_xml='):]
-            print('INFO: detect_wrapper - will output to Junit XML file {}'.format(globals.junit_xml))
+        elif key == '--wrapper.junit_xml':
+            globals.junit_xml = val
+            print('INFO: detect_wrapper - Will output to Junit XML file {}'.format(globals.junit_xml))
             report = True
-        elif opt.find('--wrapper.junit_type=') == 0:
-            globals.junit_type = opt[len('--wrapper.junit_type='):]
+        elif key == '--wrapper.junit_type':
+            globals.junit_type = val
             if globals.junit_type not in junit_type_list:
                 print("ERROR: detect_wrapper - Junit type '{}' not in supported list ()".format(
                         globals.junit_type,
                         ','.join(junit_type_list)))
-                ret = False
+                globals.unsupported = True
         # elif opt.find('--output_sarif=') == 0:
         #     globals.output_sarif = opt[len('--output_sarif='):]
-        elif opt.find('--blackduck.url=') == 0:
-            globals.bd_url = opt[len('--blackduck.url='):]
-            args.append(opt)
-        elif opt.find('--blackduck.api.token=') == 0:
-            globals.bd_apitoken = opt[len('--blackduck.api.token='):]
-            args.append(opt)
-        elif opt == '--blackduck.trust.cert=true':
-            globals.bd_trustcert = True
-            args.append(opt)
-        elif opt == '--detect.blackduck.scan.mode=RAPID':
-            print("ERROR: detect_wrapper - RAPID scan mode not supported")
-            ret = False
-        elif opt == '--detect.offline.mode=true':
-            print("ERROR: detect_wrapper - Offline scan not supported")
-            ret = False
-        elif opt.find('--detect.wait.for.results=') == 0:
-            pass
-        elif opt.find('--blackduck.proxy.host=') == 0:
-            proxy_host = opt[len('--blackduck.proxy.host='):]
-            args.append(opt)
-        elif opt.find('--blackduck.proxy.port=') == 0:
-            proxy_port = opt[len('--blackduck.proxy.port='):]
-            args.append(opt)
-        elif opt.find('--detect.policy.check.fail.on.severities=') == 0:
-            sevstr = opt[len('--detect.policy.check.fail.on.severities='):]
-            if sevstr != 'NONE':
-                globals.fail_on_policies = sevstr.split(',')
-            else:
-                args.append(opt)
-        else:
+        elif process_opt(key, val):
             args.append(opt)
 
     if globals.fail_on_policies != '' and not globals.last_scan_only and not report:
         args.append('--detect.policy.check.fail.on.severities=' + ','.join(globals.fail_on_policies))
-    else:
+    elif globals.junit_xml != '' or globals.report_html != '' or globals.report_text:
         args.append('--detect.wait.for.results=true')
-        print('INFO: detect_wrapper - will wait for scan results')
+        print('INFO: detect_wrapper - Will wait for scan results')
         globals.wait_for_scan = True
         # args.append('--detect.cleanup=false')
+    else:
+        print('INFO: detect_wrapper - Nothing to do after Detect so will not wait')
 
-    if ret is False:
+    if globals.unsupported:
         sys.exit(2)
 
-    if proxy_host != '' and proxy_host != '':
-        globals.proxy_host = proxy_host
-        globals.proxy_port = proxy_port
-        os.environ['HTTPS_PROXY'] = proxy_host + ':' + proxy_port
-        print('INFO: detect_wrapper - setting download proxy to {}:{}'.format(proxy_host, proxy_port))
+    if globals.proxy_host != '' and globals.proxy_host != '':
+        os.environ['HTTPS_PROXY'] = globals.proxy_host + ':' + globals.proxy_port
+        print('INFO: detect_wrapper - setting download proxy to {}:{}'.format(globals.proxy_host, globals.proxy_port))
     else:
         proxy_env = ''
         if os.getenv('HTTPS_PROXY') is not None or os.getenv('HTTP_PROXY') is not None:
@@ -232,14 +254,7 @@ def init():
         print("Prerequisite not met: {}".format(prereqs))
         sys.exit(3)
 
-    if os.getenv('BLACKDUCK_URL') is not None:
-        globals.bd_url = os.getenv('BLACKDUCK_URL')
-    if os.getenv('BLACKDUCK_API_TOKEN') is not None:
-        globals.bd_apitoken = os.getenv('BLACKDUCK_API_TOKEN')
-    if os.getenv('BLACKDUCK_TRUST_CERT') is not None:
-        globals.bd_apitoken = os.getenv('BLACKDUCK_API_TOKEN')
-
-    args = check_options()
+    args = check_all_options()
 
     if not check_connection("https://detect.synopsys.com"):
         print('ERROR: detect_wrapper - No connection to https://detect.synopsys.com (Proxy issue?)')

@@ -27,7 +27,10 @@ def get_detect_jar():
     if detect_jar_download_dir is not None and os.path.isdir(detect_jar_download_dir):
         outfile = os.path.join(detect_jar_download_dir, "detect7.jar")
     else:
-        outfile = os.path.join(str(Path.home()), "synopsys-detect", "detect7.jar")
+        dir = os.path.join(str(Path.home()), "synopsys-detect")
+        if not os.path.isdir(dir):
+            os.mkdir(dir)
+        outfile = os.path.join(dir, "detect7.jar")
 
     if os.path.isfile(outfile):
         return outfile
@@ -94,7 +97,7 @@ def run_detect(jarfile, runargs):
 
 
 def main():
-    print('\nINFO: detect_wrapper - version 0.7beta\n')
+    print('\nINFO: Running detect_wrapper - Version 0.7beta\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()

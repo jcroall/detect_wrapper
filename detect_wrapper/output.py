@@ -9,8 +9,6 @@ from tabulate import tabulate
 
 from detect_wrapper import data
 
-import plotly.graph_objects as go
-
 from detect_wrapper import globals
 
 # colors = px.colors.qualitative.Plotly
