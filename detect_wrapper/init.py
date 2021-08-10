@@ -23,20 +23,20 @@ check_detect_opts = [
 def check_connection(url):
     # import subprocess
     try:
-        if globals.proxy_host != '' and globals.proxy_port != '':
-            proxies = {
-                'https': 'https://{}:{}'.format(globals.proxy_host, globals.proxy_port),
-                'http': 'http://{}:{}'.format(globals.proxy_host, globals.proxy_port),
-            }
-            r = requests.get(url, allow_redirects=True, proxies=proxies)
-        else:
-            r = requests.get(url, allow_redirects=True)
+        # if globals.proxy_host != '' and globals.proxy_port != '':
+        #     prox = {
+        #         'http': '{}:{}'.format(globals.proxy_host, globals.proxy_port),
+        #     }
+        #     r = requests.get(url, allow_redirects=True, proxies=prox)
+        # else:
+        r = requests.get(url, allow_redirects=True, proxies={})
 
         if not r.ok:
             return False
         # subprocess.check_output(['curl', '-s', '-m', '5', url], stderr=subprocess.STDOUT)
         return True
-    except:
+    except Exception as exc:
+        print(str(exc))
         return False
 
 
@@ -55,37 +55,34 @@ def check_prereqs():
         if shutil.which("java") is None:
             return "Java JRE not installed"
         else:
-            try:
-                javaoutput = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT)
-                # javaoutput = 'openjdk version "13.0.1" 2019-10-15'
-                # javaoutput = 'java version "1.8.0_181"'
-                crit = True
-                if javaoutput:
-                    line0 = javaoutput.decode("utf-8").splitlines()[0]
-                    prog = line0.split(" ")[0].lower()
-                    if prog:
-                        version_string = line0.split('"')[1]
-                        if version_string:
-                            major, minor, _ = version_string.split('.')
-                            if prog == "openjdk":
-                                crit = False
-                                if major == "8" or major == "11" or major == "13" or major == "15":
-                                    pass
-                                else:
-                                    return "Java version is not supported"
-                            elif prog == "java":
-                                crit = False
-                                if major == "1" and (minor == "8" or minor == "11" or minor == "13" or minor == "15"):
-                                    pass
-                                else:
-                                    return "Java version is not supported"
-            except:
-                crit = True
+            javaoutput = subprocess.check_output(['java', '-version'], stderr=subprocess.STDOUT)
+            # javaoutput = 'openjdk version "13.0.1" 2019-10-15'
+            # javaoutput = 'java version "1.8.0_181"'
+            crit = True
+            if javaoutput:
+                line0 = javaoutput.decode("utf-8").splitlines()[0]
+                prog = line0.split(" ")[0].lower()
+                if prog:
+                    version_string = line0.split('"')[1]
+                    if version_string:
+                        major, minor, _ = version_string.split('.')
+                        if prog == "openjdk":
+                            crit = False
+                            if major == "8" or major == "11" or major == "13" or major == "15":
+                                pass
+                            else:
+                                return "Java version is not supported"
+                        elif prog == "java":
+                            crit = False
+                            if major == "1" and (minor == "8" or minor == "11" or minor == "13" or minor == "15"):
+                                pass
+                            else:
+                                return "Java version is not supported"
 
-            if crit:
-                return "Unable to determine Java JRE version"
+        if crit:
+            return "Unable to determine Java JRE version"
 
-    except:
+    except Exception as exc:
         return "Unable to determine Java JRE version"
 
     # if pform == "linux":
@@ -229,9 +226,9 @@ def check_all_options():
     if globals.unsupported:
         sys.exit(2)
 
-    if globals.proxy_host != '' and globals.proxy_host != '':
-        os.environ['HTTPS_PROXY'] = globals.proxy_host + ':' + globals.proxy_port
-        print('INFO: detect_wrapper - setting download proxy to {}:{}'.format(globals.proxy_host, globals.proxy_port))
+    if globals.proxy_host != '' and globals.proxy_port != '':
+        os.environ['HTTP_PROXY'] = 'http://' + globals.proxy_host + ':' + globals.proxy_port
+        print('INFO: detect_wrapper - setting download proxy to https://{}:{}'.format(globals.proxy_host, globals.proxy_port))
     else:
         proxy_env = ''
         if os.getenv('HTTPS_PROXY') is not None or os.getenv('HTTP_PROXY') is not None:

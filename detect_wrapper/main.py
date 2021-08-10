@@ -48,8 +48,8 @@ synopsys-detect?properties=DETECT_LATEST_7"
         djar = rjson['properties']['DETECT_LATEST_7'][0]
         if djar != '':
             j = requests.get(djar, allow_redirects=True)
-            if globals.proxy_host != '' and globals.proxy_port != '':
-                j.proxies = {'https': '{}:{}'.format(globals.proxy_host, globals.proxy_port),}
+            # if globals.proxy_host != '' and globals.proxy_port != '':
+            #     j.proxies = {'https': '{}:{}'.format(globals.proxy_host, globals.proxy_port),}
             if j.ok:
                 open(outfile, 'wb').write(j.content)
                 if os.path.isfile(outfile):
