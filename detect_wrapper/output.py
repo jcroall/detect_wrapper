@@ -650,7 +650,7 @@ def output_html_report(fname,
         }''')
     d += h1('Project: {} - Version: {} {}'.format(proj, ver, title))
     d += h2('COMPONENTS')
-    d += h3('Component Counts with max. Policy Violation')
+    d += h3('Component Counts and Highest Policy Violation')
     d += raw(create_table(data.get_comp_counts(comps, lcomps),
                           ['Scope', 'Total', 'Direct'] + globals.polsevs,
                           'html').replace(

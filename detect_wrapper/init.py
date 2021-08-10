@@ -5,14 +5,21 @@ import os
 import requests
 
 from detect_wrapper import globals
-
 from blackduck import Client
 
 
 def check_connection(url):
     # import subprocess
     try:
-        r = requests.get(url, allow_redirects=True)
+        if globals.proxy_host != '' and globals.proxy_port != '':
+            proxies = {
+                'https': 'https://{}:{}'.format(globals.proxy_host, globals.proxy_port),
+                'http': 'http://{}:{}'.format(globals.proxy_host, globals.proxy_port),
+            }
+            r = requests.get(url, allow_redirects=True, proxies=proxies)
+        else:
+            r = requests.get(url, allow_redirects=True)
+
         if not r.ok:
             return False
         # subprocess.check_output(['curl', '-s', '-m', '5', url], stderr=subprocess.STDOUT)
@@ -74,14 +81,9 @@ def check_prereqs():
     #     if shutil.which("bash") is None:
     #         return "Bash is not installed or on the PATH"
 
-    if shutil.which("curl") is None:
-        return "Curl is not installed - required"
-    else:
-        if not check_connection("https://detect.synopsys.com"):
-            return "No connection to https://detect.synopsys.com (Proxy issue?)"
-        else:
-            if not check_connection("https://sig-repo.synopsys.com"):
-                return "No connection to https://sig-repo.synopsys.com (Proxy issue?"
+    # if shutil.which("curl") is None:
+    #     return "Curl is not installed - required"
+    # else:
 
     return ""
 
@@ -137,15 +139,19 @@ def check_options():
         if opt == '--wrapper.detect7':
             pass
         elif opt == '--wrapper.last_scan_only':
+            print('INFO: detect_wrapper - will report on last scan only')
             globals.last_scan_only = True
         elif opt == '--wrapper.report_text':
+            print('INFO: detect_wrapper - will output console report')
             globals.report_text = True
             report = True
         elif opt.find('--wrapper.report_html') == 0:
             globals.report_html = opt[len('--wrapper.report_html='):]
+            print('INFO: detect_wrapper - will output report to HTML file {}'.format(globals.report_html))
             report = True
         elif opt.find('--wrapper.junit_xml=') == 0:
             globals.junit_xml = opt[len('--wrapper.junit_xml='):]
+            print('INFO: detect_wrapper - will output to Junit XML file {}'.format(globals.junit_xml))
             report = True
         elif opt.find('--wrapper.junit_type=') == 0:
             globals.junit_type = opt[len('--wrapper.junit_type='):]
@@ -192,13 +198,18 @@ def check_options():
         args.append('--detect.policy.check.fail.on.severities=' + ','.join(globals.fail_on_policies))
     else:
         args.append('--detect.wait.for.results=true')
+        print('INFO: detect_wrapper - will wait for scan results')
+        globals.wait_for_scan = True
         # args.append('--detect.cleanup=false')
 
     if ret is False:
         sys.exit(2)
 
     if proxy_host != '' and proxy_host != '':
+        globals.proxy_host = proxy_host
+        globals.proxy_port = proxy_port
         os.environ['HTTPS_PROXY'] = proxy_host + ':' + proxy_port
+        print('INFO: detect_wrapper - setting download proxy to {}:{}'.format(proxy_host, proxy_port))
     else:
         proxy_env = ''
         if os.getenv('HTTPS_PROXY') is not None or os.getenv('HTTP_PROXY') is not None:
@@ -206,10 +217,11 @@ def check_options():
                 proxy_env = os.getenv('HTTPS_PROXY')
             if os.getenv('HTTP_PROXY') is not None:
                 proxy_env = os.getenv('HTTP_PROXY')
-            proxy_host = ':'.join(proxy_env.split(':')[:2])
-            proxy_port = proxy_env.split(':')[2]
-            args.append('--blackduck.proxy.host=' + proxy_host)
-            args.append('--blackduck.proxy.port=' + proxy_port)
+            globals.proxy_host = ':'.join(proxy_env.split(':')[:2])
+            globals.proxy_port = proxy_env.split(':')[2]
+            args.append('--blackduck.proxy.host=' + globals.proxy_host)
+            args.append('--blackduck.proxy.port=' + globals.proxy_port)
+            print('INFO: detect_wrapper - setting Detect proxy to {}:{}'.format(globals.proxy_host, globals.proxy_port))
 
     return args
 
@@ -228,6 +240,13 @@ def init():
         globals.bd_apitoken = os.getenv('BLACKDUCK_API_TOKEN')
 
     args = check_options()
+
+    if not check_connection("https://detect.synopsys.com"):
+        print('ERROR: detect_wrapper - No connection to https://detect.synopsys.com (Proxy issue?)')
+        sys.exit(2)
+    if not check_connection("https://sig-repo.synopsys.com"):
+        print('ERROR: detect_wrapper - No connection to https://sig-repo.synopsys.com (Proxy issue?)')
+        sys.exit(2)
 
     if globals.bd_url == '' or globals.bd_apitoken == '':
         print('ERROR: detect_wrapper - No Black Duck server credentials supplied (--blackduck.url and \

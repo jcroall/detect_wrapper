@@ -32,28 +32,34 @@ def get_detect_jar():
     if os.path.isfile(outfile):
         return outfile
 
+    print('INFO: detect_wrapper - Downloading detect jar file')
     url = "https://sig-repo.synopsys.com/api/storage/bds-integrations-release/com/synopsys/integration/\
 synopsys-detect?properties=DETECT_LATEST_7"
     r = requests.get(url, allow_redirects=True)
     if not r.ok:
-        return ''
+        print('ERROR: detect_wrapper - Unable to load detect config {}'.format(r.reason))
+        sys.exit(1)
+
     rjson = r.json()
     if 'properties' in rjson and 'DETECT_LATEST_7' in rjson['properties']:
         djar = rjson['properties']['DETECT_LATEST_7'][0]
         if djar != '':
             j = requests.get(djar, allow_redirects=True)
+            if globals.proxy_host != '' and globals.proxy_port != '':
+                j.proxies = {'https': '{}:{}'.format(globals.proxy_host, globals.proxy_port),}
             if j.ok:
                 open(outfile, 'wb').write(j.content)
                 if os.path.isfile(outfile):
                     return outfile
-    return ''
+    print('ERROR: detect_wrapper - Unable to download detect jar file')
+    sys.exit(1)
 
 
 def run_detect(jarfile, runargs):
+    print('INFO: detect_wrapper - Running Detect')
+
     args = ['java', '-jar', jarfile]
     args += runargs
-    # print(runargs)
-    # runargs = ['cat', 'test.output']  # DEBUG
     proc = subprocess.Popen(args, universal_newlines=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     pvurl = ''
     projname = ''
@@ -76,25 +82,29 @@ def run_detect(jarfile, runargs):
                 vername = outp[outp.find(verstr) + len(verstr) + 1:].rstrip()
     retval = proc.poll()
 
+    if retval != 0:
+        print('ERROR: detect_wrapper - Detect returned non-zero value')
+        sys.exit(2)
+
     if projname == '' or vername == '':
         print('ERROR: detect_wrapper - No project or version identified from Detect run')
-        return None, None, None
+        sys.exit(3)
 
     return retval, '/'.join(pvurl.split('/')[:8]), projname, vername
 
 
 def main():
-    print('\nINFO: detect_wrapper - version 1.0\n')
+    print('\nINFO: detect_wrapper - version 0.7beta\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()
     jarfile = get_detect_jar()
-    if jarfile == '':
-        sys.exit(1)
 
     rtn, pvurl, projname, vername = run_detect(jarfile, args)
-    if rtn != 0:
-        sys.exit(rtn)
+
+    if not globals.wait_for_scan:
+        print('INFO: detect_wrapper - Done')
+        sys.exit(0)
 
     print('\nINFO: detect_wrapper - processing project data')
 
@@ -109,7 +119,6 @@ def main():
         if pvurl == '':
             sys.exit(1)
 
-    # time.sleep(20)
     allvulns = data.get_vulns(bd, pvurl)
     allcomps = data.get_comps(bd, pvurl)
     allcomps, allpols, comp_pol_list = data.get_pols(bd, allcomps)

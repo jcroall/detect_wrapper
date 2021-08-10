@@ -1,4 +1,5 @@
 last_scan_only = False
+wait_for_scan = False
 report_text = False
 report_html = ''
 junit_xml = ''
@@ -7,6 +8,10 @@ junit_type = 'pols'
 bd_url = ''
 bd_apitoken = ''
 bd_trustcert = False
+
+proxy_host = ''
+proxy_port = ''
+
 fail_on_policies = []
 polsevs = ['UNSPECIFIED', 'TRIVIAL', 'MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER', ]
 
