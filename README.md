@@ -31,7 +31,7 @@ The main benefits of using this script over the existing shell scripts are:
 
 Install the package using the command:
 
-        pip3 install -i https://test.pypi.org/simple/detect_wrapper --extra-index-url https://pypi.org/simple
+        pip3 install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple detect_wrapper
 
 # USAGE
 	
