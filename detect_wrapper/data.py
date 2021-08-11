@@ -282,6 +282,10 @@ def proc_journals(bd, projverurl, pjvername, starttime, vulns, comps, pols):
             else:
                 compname = event['currentData']['projectName']
 
+            if 'originExternalId' in event['currentData']:
+                vulnorig = event['currentData']['originExternalId']
+            else:
+                vulnorig = ''
             events.append(
                 {
                     'timestamp': event['timestamp'],
@@ -289,7 +293,7 @@ def proc_journals(bd, projverurl, pjvername, starttime, vulns, comps, pols):
                     'vuln': vulnname,
                     'comp': compname,
                     'vulnsev': vulnsev,
-                    'vulnorig': event['currentData']['originExternalId'],
+                    'vulnorig': vulnorig,
                 }
             )
             # print('RAW VULN_ADDED')

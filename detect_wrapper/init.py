@@ -232,10 +232,11 @@ def check_all_options():
     else:
         proxy_env = ''
         if os.getenv('HTTPS_PROXY') is not None or os.getenv('HTTP_PROXY') is not None:
-            if os.getenv('HTTPS_PROXY') is not None:
-                proxy_env = os.getenv('HTTPS_PROXY')
             if os.getenv('HTTP_PROXY') is not None:
                 proxy_env = os.getenv('HTTP_PROXY')
+            if os.getenv('HTTPS_PROXY') is not None:
+                proxy_env = os.getenv('HTTPS_PROXY')
+
             globals.proxy_host = ':'.join(proxy_env.split(':')[:2])
             globals.proxy_port = proxy_env.split(':')[2]
             args.append('--blackduck.proxy.host=' + globals.proxy_host)

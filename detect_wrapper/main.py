@@ -97,7 +97,7 @@ def run_detect(jarfile, runargs):
 
 
 def main():
-    print('\nINFO: Running detect_wrapper - Version 0.7beta\n')
+    print('\nINFO: Running detect_wrapper - Version 0.8beta\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()
@@ -109,7 +109,7 @@ def main():
         print('INFO: detect_wrapper - Done')
         sys.exit(0)
 
-    print('\nINFO: detect_wrapper - processing project data')
+    print('\nINFO: detect_wrapper - Processing project data ...')
 
     # DEBUG
     # projname = 'test-duck'

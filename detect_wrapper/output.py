@@ -8,7 +8,6 @@ from dominate.tags import *
 from tabulate import tabulate
 
 from detect_wrapper import data
-
 from detect_wrapper import globals
 
 # colors = px.colors.qualitative.Plotly
@@ -646,7 +645,7 @@ def output_html_report(fname,
         h1, h2, h3 {
           font-family: Arial, sans-serif;
         }''')
-    d += h1('Project: {} - Version: {} {}'.format(proj, ver, title))
+    d += h1(a('Project: {} - Version: {} {}'.format(proj, ver, title), href=pvurl, target='_blank'))
     d += h2('COMPONENTS')
     d += h3('Component Counts and Highest Policy Violation')
     d += raw(create_table(data.get_comp_counts(comps, lcomps),
@@ -742,6 +741,84 @@ def output_html_report(fname,
 
 
 def output_text_report(fname,
+                       comps, lcomps, topcomps, newcomps,
+                       vulns, lvulns, topvulns,
+                       proj, ver, pvurl, title, last_scan):
+    if title == '':
+        title = '(Full Project)'
+
+    txt = '\n==========================================================================================================\n'
+    txt += 'CONSOLE REPORT\nProject: {} - Version: {} {}\n\n'.format(proj, ver, title)
+    txt += 'COMPONENTS\n\n'
+    txt += 'Component Counts and Highest Policy Violation\n'
+    txt += create_table(data.get_comp_counts(comps, lcomps),
+                          ['Scope', 'Total', 'Direct'] + globals.polsevs,
+                          'fancy_grid')
+    txt += '\n\n'
+
+    if len(newcomps) > 0 and last_scan:
+        t = []
+        for j in newcomps:
+            # find compurl from allcomps
+            cstring = j['compname']
+            for c in comps:
+                if 'componentVersionName' not in c:
+                    continue
+                cname = c['componentName'] + '/' + c['componentVersionName']
+                # if j['compname'] == cname:
+                #     cstring = '<a href="{}" target="_blank">{}</a>'.format(c['componentVersion'], cstring)
+            t.append([cstring, j['pols'], j['vulns'], j['matches_direct']])
+        txt += 'Added Components - First 10 with Direct Matches ' + title + '\n'
+        txt += create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'fancy_grid')
+    else:
+        txt += 'Added Components - Direct Matches ' + title + '\n'
+        txt += 'None'
+
+    if len(topcomps) > 0:
+        t = []
+        for j in topcomps:
+            t.append([j['compname'], j['pols'], j['vulns'], j['matches']])
+        txt += '\n\nTop 10 Components with Issues ' + title + '\n'
+        txt += create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'fancy_grid')
+    else:
+        txt += '\n\nTop 10 Components with Issues ' + title + '\n'
+        txt += 'None'
+
+    txt += '\n\nVULNERABILITIES\n\n'
+    txt += create_table(data.get_vuln_counts(vulns, lvulns),
+                        ['Scope', 'LOW', 'MED', 'HIGH', 'CRIT'], 'fancy_grid')
+
+    # if len(vulns) > 0:
+    #     if last_scan:
+    #         barname = 'Vulnerabilities ' + title
+    #         d += raw(create_summary_vulnfig(lvulns, barname))
+    #     else:
+    #         barname = 'All Vulnerabilities'
+    #         d += raw(create_summary_vulnfig(vulns, barname))
+
+    newvulnlist = topvulns
+    t = []
+    for v in newvulnlist:
+        t.append([
+            # '<a href="{}" target="_blank">{}</a>'.format(v['vulnurl'], v['vulnid'], ),
+            v['vulnid'],
+            v['sev'],
+            v['comps'],
+            v['desc'],
+        ])
+
+    if len(topvulns) > 0:
+        txt += '\n\nTop 10 Vulnerabilities ' + title + '\n'
+        txt += create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], 'fancy_grid')
+    else:
+        txt += '\n\nTop 10 Vulnerabilities ' + title + '\n'
+        txt += 'None\n'
+    txt += '\n=========================================================================================================\n'
+
+    print(txt)
+
+
+def output_text_report_old(fname,
                        comps, lcomps, topcomps,
                        newcomps, vulns, lvulns,
                        topvulns, proj, ver, pvurl, title,
