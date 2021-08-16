@@ -23,6 +23,9 @@ To Do
 
 
 def get_detect_jar():
+    if globals.detect_jar != '':
+        return globals.detect_jar
+
     detect_jar_download_dir = os.getenv('DETECT_JAR_DOWNLOAD_DIR')
     if detect_jar_download_dir is not None and os.path.isdir(detect_jar_download_dir):
         outfile = os.path.join(detect_jar_download_dir, "detect7.jar")
@@ -97,7 +100,7 @@ def run_detect(jarfile, runargs):
 
 
 def main():
-    print('\nINFO: Running detect_wrapper - Version 0.8beta\n')
+    print('\nINFO: Running detect_wrapper - Version 0.9beta\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()

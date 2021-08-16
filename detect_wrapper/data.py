@@ -131,11 +131,18 @@ def proc_events(eventlist, ovulns, ocomps, opols):
             # print("Policy VIOLATED: {} - Component: {}".format(event['name'], event['comp']))
 
         if event['type'] == 'COMP_ADDED':
-            comp = {
-                'comp': event['comp'],
-                'originid': event['originid'],
-                'originnamespace': event['originnamespace'],
-            }
+            if 'originid' in event and 'originnamespace' in event:
+                comp = {
+                    'comp': event['comp'],
+                    'originid': event['originid'],
+                    'originnamespace': event['originnamespace'],
+                }
+            else:
+                comp = {
+                    'comp': event['comp'],
+                    'originid': '',
+                    'originnamespace': '',
+                }
             newcomps.append(comp)
             # print("Component ADDED: {}".format(event['comp']))
 
@@ -250,13 +257,22 @@ def proc_journals(bd, projverurl, pjvername, starttime, vulns, comps, pols):
                 compname = event['objectData']['name'] + "/" + event['currentData']['version']
             else:
                 compname = event['objectData']['name']
-            events.append(
-                {
-                    'timestamp': event['timestamp'],
-                    'type': 'COMP_ADDED',
-                    'comp': compname,
-                    'originid': event['currentData']['originExternalId'],
-                    'originnamespace': event['currentData']['originExternalNamespace']})
+            if 'originExternalId' in event['currentData']:
+                events.append(
+                    {
+                        'timestamp': event['timestamp'],
+                        'type': 'COMP_ADDED',
+                        'comp': compname,
+                        'originid': event['currentData']['originExternalId'],
+                        'originnamespace': event['currentData']['originExternalNamespace']})
+            else:
+                events.append(
+                    {
+                        'timestamp': event['timestamp'],
+                        'type': 'COMP_ADDED',
+                        'comp': compname,
+                        # 'originid': event['currentData']['originExternalId'],
+                        'originnamespace': event['currentData']['originExternalNamespace']})
             # print('RAW COMPONENT ADDED')
         elif event['action'] == 'Component Ignored':
             if 'version' in event['currentData']:
@@ -556,10 +572,10 @@ def get_comp_counts(comps, latestcomps):
             if match in globals.matchdirecttypes:
                 ldirectcount += 1
                 break
-        if comp['maxpolsev'] < 0:
-            continue
         compname = comp['componentName'] + '/' + comp['componentVersionName']
         lcomplist.append(compname)
+        if comp['maxpolsev'] < 0:
+            continue
         lpolsevcounts[comp['maxpolsev']] += 1
 
     return [

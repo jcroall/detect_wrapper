@@ -208,6 +208,13 @@ def check_all_options():
                         globals.junit_type,
                         ','.join(junit_type_list)))
                 globals.unsupported = True
+        elif key == '--wrapper.detect_jar':
+            if os.path.isfile(val):
+                globals.detect_jar = val
+                print('INFO: detect_wrapper - Will use existing Detect jar (no download) {}'.format(globals.detect_jar))
+            else:
+                print('ERROR: detect_wrapper - Supplied detect jar {} does not exist'.format(val))
+                globals.unsupported = True
         # elif opt.find('--output_sarif=') == 0:
         #     globals.output_sarif = opt[len('--output_sarif='):]
         elif process_opt(key, val):

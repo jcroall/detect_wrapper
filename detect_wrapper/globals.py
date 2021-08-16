@@ -8,6 +8,7 @@ junit_type = 'pols'
 bd_url = ''
 bd_apitoken = ''
 bd_trustcert = False
+detect_jar = ''
 
 proxy_host = ''
 proxy_port = ''
