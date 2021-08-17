@@ -18,18 +18,15 @@ def get_detect_jar():
         return globals.detect_jar
 
     detect_jar_download_dir = os.getenv('DETECT_JAR_DOWNLOAD_DIR')
-    if detect_jar_download_dir is not None and os.path.isdir(detect_jar_download_dir):
-        outfile = os.path.join(detect_jar_download_dir, "detect7.jar")
-    else:
+    if detect_jar_download_dir is None or not os.path.isdir(detect_jar_download_dir):
         dir = os.path.join(str(Path.home()), "synopsys-detect")
         if not os.path.isdir(dir):
             os.mkdir(dir)
-        outfile = os.path.join(dir, "detect7.jar")
+        dir = os.path.join(dir, 'download')
+        if not os.path.isdir(dir):
+            os.mkdir(dir)
+        # outfile = os.path.join(dir, "detect7.jar")
 
-    if os.path.isfile(outfile):
-        return outfile
-
-    print('INFO: detect_wrapper - Downloading detect jar file')
     url = "https://sig-repo.synopsys.com/api/storage/bds-integrations-release/com/synopsys/integration/\
 synopsys-detect?properties=DETECT_LATEST_7"
     r = requests.get(url, allow_redirects=True)
@@ -41,13 +38,19 @@ synopsys-detect?properties=DETECT_LATEST_7"
     if 'properties' in rjson and 'DETECT_LATEST_7' in rjson['properties']:
         djar = rjson['properties']['DETECT_LATEST_7'][0]
         if djar != '':
+            fname = djar.split('/')[-1]
+            jarpath = os.path.join(dir, fname)
+            if os.path.isfile(jarpath):
+                return jarpath
+            print('INFO: detect_wrapper - Downloading detect jar file')
+
             j = requests.get(djar, allow_redirects=True)
             # if globals.proxy_host != '' and globals.proxy_port != '':
             #     j.proxies = {'https': '{}:{}'.format(globals.proxy_host, globals.proxy_port),}
             if j.ok:
-                open(outfile, 'wb').write(j.content)
-                if os.path.isfile(outfile):
-                    return outfile
+                open(jarpath, 'wb').write(j.content)
+                if os.path.isfile(jarpath):
+                    return jarpath
     print('ERROR: detect_wrapper - Unable to download detect jar file')
     sys.exit(1)
 
@@ -91,7 +94,7 @@ def run_detect(jarfile, runargs):
 
 
 def main():
-    print('\nINFO: Running detect_wrapper - Version 0.10beta\n')
+    print('\nINFO: Running detect_wrapper - Version 0.11beta\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()
@@ -103,6 +106,7 @@ def main():
         for arg in args:
             if opt.split('=')[0] == arg.split('=')[0]:
                 def_opts.remove(opt)
+                print(f"INFO: detect_wrapper - Ignoring default option '{opt}' as specified elsewhere")
                 break
 
     args = args + def_opts

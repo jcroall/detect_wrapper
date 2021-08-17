@@ -13,6 +13,7 @@ bd_projname = ''
 bd_projvername = ''
 use_defaults = True
 detect_jar = ''
+detector_depth = 0
 
 proxy_host = ''
 proxy_port = ''
@@ -55,9 +56,33 @@ matchdirecttypes = [
 
 default_configs = {
     'OTHER': '',
-    'pom.xml': '--fail;',
-    'go.mod': '',
-    '.sln,.csproj': '',
+    "Cargo.lock,Cargo.toml": "",
+    "Cartfile": "",
+    "compile_commands.json": "",
+    "Podfile.lock": "",
+    "environment.yml": "",
+    "conanfile.txt,conanfile.py, conan.lock": "",
+    "Makefile.PL": "",
+    "packrat.lock": "",
+    "Gopkg.lock": "",
+    "gogradle.lock": "",
+    "go.mod": "",
+    "vendor.json,vendor.conf": "",
+    "build.gradle": "",
+    "rebar.config": "",
+    "package.json,package-lock.json,npm-shrinkwrap.json": "",
+    "pom.xml": "",
+    "pom.groovy": "",
+    ".csproj,.fsproj,.vbproj,.asaproj,.dcproj,.shproj,.ccproj,.sfproj,.njsproj,.vcxproj,.vcproj,.xproj,.pyproj,.hiveproj,.pigproj,.jsproj,.usqlproj,.deployproj,.msbuildproj,.sqlproj,.dbproj,.rproj": "",
+    "composer.lock,composer.json": "",
+    "package.xml": "",
+    "Pipfile,Pipfile.lock": "",
+    "setup.py,requirements.txt": "",
+    "Poetry.lock,pyproject.toml": "",
+    "Gemfile.lock": "",
+    "build.sbt": "",
+    "Package.swift": "",
+    "yarn.lock": "",
 }
 
 default_options_proj = 'DETECT_DEFAULT_OPTIONS'

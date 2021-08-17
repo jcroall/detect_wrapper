@@ -15,6 +15,7 @@ check_detect_opts = [
     'detect.project.name',
     'detect.project.version.name',
     'detect.blackduck.scan.mode',
+    'detect.detector.search.depth',
     'detect.offline.mode',
     'detect.wait.for.results',
     'blackduck.proxy.host',
@@ -100,7 +101,7 @@ def check_prereqs():
     return ""
 
 
-def process_opt(opt, val):
+def process_detect_opt(opt, val):
     use_opt = True
     if opt.find('--') == 0:
         opt = opt[2:]
@@ -122,6 +123,8 @@ def process_opt(opt, val):
         if val == 'RAPID':
             print("ERROR: detect_wrapper - RAPID scan mode not supported")
         globals.unsupported = True
+    elif opt == 'detect.detector.search.depth':
+        globals.detector_depth = int(val)
     elif opt == 'detect.offline.mode':
         print("ERROR: detect_wrapper - Offline scan not supported")
         globals.unsupported = True
@@ -142,7 +145,7 @@ def check_envvars():
         envvar = detopt.upper().replace('.', '_')
         envval = os.getenv(envvar)
         if envval is not None:
-            process_opt(detopt, envval)
+            process_detect_opt(detopt, envval)
     return
 
 
@@ -171,7 +174,7 @@ def check_spring_config():
         key = arr[0]
         val = arr[1]
         if key in check_detect_opts:
-            process_opt(key, val)
+            process_detect_opt(key, val)
     return
 
 
@@ -193,9 +196,7 @@ def check_all_options():
         if len(arr) >= 2:
             val = '='.join(arr[1:])
 
-        if key == '--wrapper.detect7':
-            pass
-        elif key == '--wrapper.last_scan_only':
+        if key == '--wrapper.last_scan_only':
             print('INFO: detect_wrapper - Will report on last scan only')
             globals.last_scan_only = True
         elif key == '--wrapper.report_text':
@@ -229,7 +230,7 @@ def check_all_options():
         elif key == '--wrapper.no_defaults':
             print('INFO: detect_wrapper - Will not use default Detect scan options from server')
             globals.use_defaults = False
-        elif process_opt(key, val):
+        elif process_detect_opt(key, val):
             args.append(opt)
 
     if globals.fail_on_policies != '' and not globals.last_scan_only and not report:
@@ -296,3 +297,175 @@ def init():
         verify=globals.bd_trustcert  # TLS certificate verification
     )
     return bd, args
+
+
+default_configs = {
+    'OTHER': '',
+    'pom.xml': '',
+    'go.mod': '',
+    '.sln,.csproj': '',
+}
+
+default_options_proj = 'DETECT_DEFAULT_OPTIONS'
+
+
+def set_global_defaults(bd):
+    try:
+        projid = ''
+        for i, key in enumerate(default_configs.keys()):
+            print(key)
+
+            vers = {
+                "versionName": key,
+                "nickname": "nickname",
+                # "license": {
+                #     "type": "DISJUNCTIVE",
+                #     "licenses": [],
+                #     "license": "https://.../licenses/{licenseId}"
+                # },
+                "releaseComments": default_configs[key],
+                # "releasedOn": "2021-06-29T01:44:16.225Z",
+                "phase": "DEVELOPMENT",
+                "distribution": "INTERNAL",
+                # "cloneFromReleaseUrl": "https://.../api/projects/{projectId}/versions/{versionId}",
+                "protectedFromDeletion": False
+            }
+            if i == 0:
+                project_data = {
+                    'name': default_options_proj,
+                    'description': "",
+                    'projectLevelAdjustments': True,
+                    "versionRequest": vers,
+                }
+                r = bd.session.post("/api/projects", json=project_data)
+                r.raise_for_status()
+                projid = r.links['project']['url']
+                print(f"created project {default_options_proj}")
+            else:
+                r = bd.session.post(projid + '/versions', json=vers)
+                r.raise_for_status()
+                print(f"created version {key}")
+
+    except requests.HTTPError as err:
+        # more fine grained error handling here; otherwise:
+        bd.http_error_handler(err)
+
+
+def get_global_defaults(bd):
+    configs = []
+
+    try:
+        params = {
+            'q': "name:" + default_options_proj,
+            'sort': 'name',
+        }
+        projects = bd.get_resource('projects', params=params, items=False)
+        if projects['totalCount'] == 0:
+            return ''
+        for proj in projects['items']:
+            if proj['name'] != default_options_proj:
+                continue
+            params = {
+                'sort': 'versionName',
+            }
+            versions = bd.get_resource('versions', parent=proj, params=params, items=False)
+            for i, ver in enumerate(versions['items']):
+                vname = ver['versionName']
+                if ':' in vname:
+                    num = vname.split(':')[0]
+                    vname = vname.split(':')[1]
+                else:
+                    num = i
+
+                for pattern in vname.split(','):
+                    configs.append(
+                        {
+                            'num': num,
+                            'pattern': pattern,
+                            'opts': ver['releaseComments']
+                        }
+                    )
+        return sorted(configs, key=lambda i: i['num'])
+
+    except requests.HTTPError as err:
+        # more fine grained error handling here; otherwise:
+        bd.http_error_handler(err)
+        return configs
+
+
+def get_proj(bd, projname):
+    params = {
+        'q': "name:" + projname,
+        'sort': 'name',
+    }
+    projects = bd.get_resource('projects', params=params, items=False)
+    if projects['totalCount'] == 0:
+        return ''
+    return projects
+
+
+def get_projver(bd, projname, vername):
+    proj = get_proj(bd, projname)
+    if proj == '':
+        return ''
+    params = {
+        'sort': 'name',
+    }
+    versions = bd.get_resource('versions', parent=proj, params=params)
+    for ver in versions:
+        if ver['versionName'] == vername:
+            return ver
+    return ''
+
+
+def process_global_defaults(bd):
+    conflist = get_global_defaults(bd)
+    file_match_list = {}
+    if globals.bd_sourcepath == '':
+        sourcepath = os.getcwd()
+    else:
+        sourcepath = globals.bd_sourcepath
+
+    try:
+        for entry in os.scandir(sourcepath):
+            if entry.is_dir(follow_symlinks=False):
+                continue
+
+            # entry.name, entry.path
+            ext = os.path.splitext(entry.name)[1]
+            for conf in conflist:
+                if conf['pattern'][0] == '.' and conf['pattern'][1:] == ext:
+                    # Matched extension
+                    return conf['opts']
+                elif conf['pattern'] == entry.name:
+                    # Matched complete file
+                    return conf['opts']
+    except OSError:
+        print("ERROR: Unable to open folder {}\n".format(sourcepath))
+        return ''
+    return ''
+
+
+def process_defaults(bd, projname, vername):
+    # If no global settings then set global settings
+    # If proj-ver supplied then check if proj-ver options set (custom field)
+    # If no proj-ver or no proj-ver options in proj then use global settings
+    # If global settings then loop through file patterns and use option for first match
+    # If not file pattern match then use OTHER options
+    use_defaults = True
+    opts = ''
+
+    projs = get_proj(bd, default_options_proj)
+    if projs == '':
+        set_global_defaults(bd)
+
+    if projname != '' and vername != '':
+        ver = get_projver(bd, projname, vername)
+        if ver != '':
+            use_defaults = False
+            opts = ver['releaseComments']
+
+    if use_defaults:
+        opts = process_global_defaults(bd)
+
+    return opts
