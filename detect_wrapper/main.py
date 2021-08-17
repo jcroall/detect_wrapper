@@ -5,21 +5,12 @@ import requests
 import os
 import datetime
 from pathlib import Path
-import time
 
 from detect_wrapper import globals
 from detect_wrapper import output
 from detect_wrapper import init
 from detect_wrapper import data
-
-'''
-To Do
-- remove remediated vulns - DONE
-- detect return code - DONE
-- fail on policies for latest scan only - DONE
-- sort policies by severity
-- manage ignored components - DONE
-'''
+from detect_wrapper import config
 
 
 def get_detect_jar():
@@ -96,17 +87,26 @@ def run_detect(jarfile, runargs):
         print('ERROR: detect_wrapper - No project or version identified from Detect run')
         sys.exit(3)
 
-    return retval, '/'.join(pvurl.split('/')[:8]), projname, vername
+    return '/'.join(pvurl.split('/')[:8]), projname, vername
 
 
 def main():
-    print('\nINFO: Running detect_wrapper - Version 0.9beta\n')
+    print('\nINFO: Running detect_wrapper - Version 0.10beta\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()
     jarfile = get_detect_jar()
 
-    rtn, pvurl, projname, vername = run_detect(jarfile, args)
+    def_opts = config.process_defaults(bd, globals.bd_projname, globals.bd_projvername)
+
+    for opt in def_opts:
+        for arg in args:
+            if opt.split('=')[0] == arg.split('=')[0]:
+                def_opts.remove(opt)
+                break
+
+    args = args + def_opts
+    pvurl, projname, vername = run_detect(jarfile, args)
 
     if not globals.wait_for_scan:
         print('INFO: detect_wrapper - Done')

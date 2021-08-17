@@ -11,6 +11,9 @@ check_detect_opts = [
     'blackduck.url',
     'blackduck.api.token',
     'blackduck.trust.cert',
+    'detect.source.path',
+    'detect.project.name',
+    'detect.project.version.name',
     'detect.blackduck.scan.mode',
     'detect.offline.mode',
     'detect.wait.for.results',
@@ -83,7 +86,7 @@ def check_prereqs():
             return "Unable to determine Java JRE version"
 
     except Exception as exc:
-        return "Unable to determine Java JRE version"
+        return "Unable to determine Java JRE version" + str(exc)
 
     # if pform == "linux":
     #     # check for bash and curl
@@ -109,6 +112,12 @@ def process_opt(opt, val):
     elif opt == 'blackduck.trust.cert':
         if val == 'true':
             globals.bd_trustcert = True
+    elif opt == 'detect.source.path':
+        globals.bd_sourcepath = val
+    elif opt == 'detect.project.name':
+        globals.bd_projname = val
+    elif opt == 'detect.project.version.name':
+        globals.bd_projvername = val
     elif opt == 'detect.blackduck.scan.mode':
         if val == 'RAPID':
             print("ERROR: detect_wrapper - RAPID scan mode not supported")
@@ -217,6 +226,9 @@ def check_all_options():
                 globals.unsupported = True
         # elif opt.find('--output_sarif=') == 0:
         #     globals.output_sarif = opt[len('--output_sarif='):]
+        elif key == '--wrapper.no_defaults':
+            print('INFO: detect_wrapper - Will not use default Detect scan options from server')
+            globals.use_defaults = False
         elif process_opt(key, val):
             args.append(opt)
 
@@ -235,7 +247,8 @@ def check_all_options():
 
     if globals.proxy_host != '' and globals.proxy_port != '':
         os.environ['HTTP_PROXY'] = 'http://' + globals.proxy_host + ':' + globals.proxy_port
-        print('INFO: detect_wrapper - setting download proxy to https://{}:{}'.format(globals.proxy_host, globals.proxy_port))
+        print('INFO: detect_wrapper - setting download proxy to https://{}:{}'.format(globals.proxy_host,
+                                                                                      globals.proxy_port))
     else:
         proxy_env = ''
         if os.getenv('HTTPS_PROXY') is not None or os.getenv('HTTP_PROXY') is not None:

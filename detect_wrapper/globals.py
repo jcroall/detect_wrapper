@@ -8,6 +8,10 @@ junit_type = 'pols'
 bd_url = ''
 bd_apitoken = ''
 bd_trustcert = False
+bd_sourcepath = ''
+bd_projname = ''
+bd_projvername = ''
+use_defaults = True
 detect_jar = ''
 
 proxy_host = ''
@@ -48,3 +52,12 @@ matchdirecttypes = [
     'BINARY',
     'DIRECT_DEPENDENCY_BINARY',
 ]
+
+default_configs = {
+    'OTHER': '',
+    'pom.xml': '--fail;',
+    'go.mod': '',
+    '.sln,.csproj': '',
+}
+
+default_options_proj = 'DETECT_DEFAULT_OPTIONS'

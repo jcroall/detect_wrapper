@@ -85,7 +85,6 @@ def get_pols(bd, comps):
         comp['maxpolsev'] = maxsev
         newcomps.append(comp)
 
-
     return newcomps, pols_dict, comp_pol_list
 
 
@@ -420,7 +419,7 @@ def get_projver(bd, projname, vername):
     projects = bd.get_resource('projects', params=params, items=False)
     if projects['totalCount'] == 0:
         return ''
-    projects = bd.get_resource('projects', params=params)
+    # projects = bd.get_resource('projects', params=params)
     for proj in projects:
         versions = bd.get_resource('versions', parent=proj, params=params)
         for ver in versions:
@@ -512,7 +511,7 @@ def get_top10_comps(vulns, comps, pols):
 
 
 def get_top10_vulns(vulns, url):
-    urlbase='/'.join(url.split('/')[:3]) + '/api/vulnerabilities/'
+    urlbase = '/'.join(url.split('/')[:3]) + '/api/vulnerabilities/'
     vulnrecs = []
     vulnidlist = []
     for vuln in vulns:
@@ -607,7 +606,7 @@ def get_vuln_counts(vulns, latestvulns):
 
     return [
         ['In Full Project',
-         vulncounts['LOW'], vulncounts['MEDIUM'], vulncounts['HIGH'], vulncounts['CRITICAL'],],
+         vulncounts['LOW'], vulncounts['MEDIUM'], vulncounts['HIGH'], vulncounts['CRITICAL'], ],
         ['Added in Latest Scan',
-         lvulncounts['LOW'], lvulncounts['MEDIUM'], lvulncounts['HIGH'], lvulncounts['CRITICAL'],],
+         lvulncounts['LOW'], lvulncounts['MEDIUM'], lvulncounts['HIGH'], lvulncounts['CRITICAL'], ],
     ]

@@ -673,10 +673,10 @@ def output_html_report(fname,
                 if j['compname'] == cname:
                     cstring = '<a href="{}" target="_blank">{}</a>'.format(c['componentVersion'], cstring)
             t.append([cstring, j['pols'], j['vulns'], j['matches_direct']])
-        d += h3('Added Components - First 10 with Direct Matches ' + title)
+        d += h3('Directly Added Components - First 10 ' + title)
         d += raw(create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'unsafehtml'))
     # else:
-    #     d += h3('Added Components - Direct Matches')
+    #     d += h3('Directly Added Components - Direct Matches')
     #     d += p('None')
 
     if len(topcomps) > 0:
@@ -768,10 +768,10 @@ def output_text_report(fname,
                 # if j['compname'] == cname:
                 #     cstring = '<a href="{}" target="_blank">{}</a>'.format(c['componentVersion'], cstring)
             t.append([cstring, j['pols'], j['vulns'], j['matches_direct']])
-        txt += 'Added Components - First 10 with Direct Matches ' + title + '\n'
+        txt += 'Directly Added Components - First 10 ' + title + '\n'
         txt += create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'fancy_grid')
     else:
-        txt += 'Added Components - Direct Matches ' + title + '\n'
+        txt += 'Directly Added Components ' + title + '\n'
         txt += 'None'
 
     if len(topcomps) > 0:
