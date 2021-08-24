@@ -23,6 +23,31 @@ check_detect_opts = [
     'detect.policy.check.fail.on.severities',
 ]
 
+wrapper_opts = [
+    '--wrapper.last_scan_only',
+    '--wrapper.auto_last_scan',
+    '--wrapper.report_text',
+    '--wrapper.report_html',
+    '--wrapper.junit_xml',
+    '--wrapper.junit_type',
+    '--wrapper.detect_jar',
+    '--wrapper.no_defaults',
+    '--wrapper.version',
+    '--wrapper.help',
+]
+
+wrapper_help = [
+    ':\t\t\tReport (calculate policy violations) on the last scan only',
+    ':\t\t\tFor first scan, report on full scan otherwise report (calculate policy violations) on the last scan only',
+    ':\t\t\t\tOutput console text report',
+    '=out.html:\t\tOutput HTML file (out.html)',
+    ':\t\t\t\tOutput Junit XML (default policy violations for full scan)',
+    '=[comps|vulns|pols]:\tOutput Junit XML data for components, vulnerabilities or policies',
+    '=detect.jar:\tSpecify existing Detect jar file (detect.jar)',
+    ':\t\t\t\tIgnore scan options stored on server in DETECT_DEFAULT_OPTIONS project (notes fields within versions)',
+    ':\t\t\t\t\tPrint version',
+    ':\t\t\t\t\t\tPrint this help',
+]
 
 def check_connection(url):
     # import subprocess
@@ -196,9 +221,15 @@ def check_all_options():
         if len(arr) >= 2:
             val = '='.join(arr[1:])
 
-        if key == '--wrapper.last_scan_only':
+        if key not in wrapper_opts:
+            if process_detect_opt(key, val):
+                args.append(opt)
+        elif key == '--wrapper.last_scan_only':
             print('INFO: detect_wrapper - Will report on last scan only')
             globals.last_scan_only = True
+        elif key == '--wrapper.auto_last_scan':
+            print('INFO: detect_wrapper - Will AUTO report on last scan only')
+            globals.auto_last_scan = True
         elif key == '--wrapper.report_text':
             print('INFO: detect_wrapper - Will output console report')
             globals.report_text = True
@@ -230,8 +261,14 @@ def check_all_options():
         elif key == '--wrapper.no_defaults':
             print('INFO: detect_wrapper - Will not use default Detect scan options from server')
             globals.use_defaults = False
-        elif process_detect_opt(key, val):
-            args.append(opt)
+        elif key == '--wrapper.version':
+            print(f"Detect_wrapper: version {globals.version}")
+            sys.exit(0)
+        elif key == '--wrapper.help':
+            print(f"Detect_wrapper: - Wrapper options (in addition to all supported Detect options passed to Detect)")
+            for o, h in zip(wrapper_opts, wrapper_help):
+                print(f"\t{o}{h}")
+            sys.exit(0)
 
     if globals.fail_on_policies != '' and not globals.last_scan_only and not report:
         args.append('--detect.policy.check.fail.on.severities=' + ','.join(globals.fail_on_policies))
@@ -297,175 +334,3 @@ def init():
         verify=globals.bd_trustcert  # TLS certificate verification
     )
     return bd, args
-
-
-default_configs = {
-    'OTHER': '',
-    'pom.xml': '',
-    'go.mod': '',
-    '.sln,.csproj': '',
-}
-
-default_options_proj = 'DETECT_DEFAULT_OPTIONS'
-
-
-def set_global_defaults(bd):
-    try:
-        projid = ''
-        for i, key in enumerate(default_configs.keys()):
-            print(key)
-
-            vers = {
-                "versionName": key,
-                "nickname": "nickname",
-                # "license": {
-                #     "type": "DISJUNCTIVE",
-                #     "licenses": [],
-                #     "license": "https://.../licenses/{licenseId}"
-                # },
-                "releaseComments": default_configs[key],
-                # "releasedOn": "2021-06-29T01:44:16.225Z",
-                "phase": "DEVELOPMENT",
-                "distribution": "INTERNAL",
-                # "cloneFromReleaseUrl": "https://.../api/projects/{projectId}/versions/{versionId}",
-                "protectedFromDeletion": False
-            }
-            if i == 0:
-                project_data = {
-                    'name': default_options_proj,
-                    'description': "",
-                    'projectLevelAdjustments': True,
-                    "versionRequest": vers,
-                }
-                r = bd.session.post("/api/projects", json=project_data)
-                r.raise_for_status()
-                projid = r.links['project']['url']
-                print(f"created project {default_options_proj}")
-            else:
-                r = bd.session.post(projid + '/versions', json=vers)
-                r.raise_for_status()
-                print(f"created version {key}")
-
-    except requests.HTTPError as err:
-        # more fine grained error handling here; otherwise:
-        bd.http_error_handler(err)
-
-
-def get_global_defaults(bd):
-    configs = []
-
-    try:
-        params = {
-            'q': "name:" + default_options_proj,
-            'sort': 'name',
-        }
-        projects = bd.get_resource('projects', params=params, items=False)
-        if projects['totalCount'] == 0:
-            return ''
-        for proj in projects['items']:
-            if proj['name'] != default_options_proj:
-                continue
-            params = {
-                'sort': 'versionName',
-            }
-            versions = bd.get_resource('versions', parent=proj, params=params, items=False)
-            for i, ver in enumerate(versions['items']):
-                vname = ver['versionName']
-                if ':' in vname:
-                    num = vname.split(':')[0]
-                    vname = vname.split(':')[1]
-                else:
-                    num = i
-
-                for pattern in vname.split(','):
-                    configs.append(
-                        {
-                            'num': num,
-                            'pattern': pattern,
-                            'opts': ver['releaseComments']
-                        }
-                    )
-        return sorted(configs, key=lambda i: i['num'])
-
-    except requests.HTTPError as err:
-        # more fine grained error handling here; otherwise:
-        bd.http_error_handler(err)
-        return configs
-
-
-def get_proj(bd, projname):
-    params = {
-        'q': "name:" + projname,
-        'sort': 'name',
-    }
-    projects = bd.get_resource('projects', params=params, items=False)
-    if projects['totalCount'] == 0:
-        return ''
-    return projects
-
-
-def get_projver(bd, projname, vername):
-    proj = get_proj(bd, projname)
-    if proj == '':
-        return ''
-    params = {
-        'sort': 'name',
-    }
-    versions = bd.get_resource('versions', parent=proj, params=params)
-    for ver in versions:
-        if ver['versionName'] == vername:
-            return ver
-    return ''
-
-
-def process_global_defaults(bd):
-    conflist = get_global_defaults(bd)
-    file_match_list = {}
-    if globals.bd_sourcepath == '':
-        sourcepath = os.getcwd()
-    else:
-        sourcepath = globals.bd_sourcepath
-
-    try:
-        for entry in os.scandir(sourcepath):
-            if entry.is_dir(follow_symlinks=False):
-                continue
-
-            # entry.name, entry.path
-            ext = os.path.splitext(entry.name)[1]
-            for conf in conflist:
-                if conf['pattern'][0] == '.' and conf['pattern'][1:] == ext:
-                    # Matched extension
-                    return conf['opts']
-                elif conf['pattern'] == entry.name:
-                    # Matched complete file
-                    return conf['opts']
-    except OSError:
-        print("ERROR: Unable to open folder {}\n".format(sourcepath))
-        return ''
-    return ''
-
-
-def process_defaults(bd, projname, vername):
-    # If no global settings then set global settings
-    # If proj-ver supplied then check if proj-ver options set (custom field)
-    # If no proj-ver or no proj-ver options in proj then use global settings
-    # If global settings then loop through file patterns and use option for first match
-    # If not file pattern match then use OTHER options
-    use_defaults = True
-    opts = ''
-
-    projs = get_proj(bd, default_options_proj)
-    if projs == '':
-        set_global_defaults(bd)
-
-    if projname != '' and vername != '':
-        ver = get_projver(bd, projname, vername)
-        if ver != '':
-            use_defaults = False
-            opts = ver['releaseComments']
-
-    if use_defaults:
-        opts = process_global_defaults(bd)
-
-    return opts

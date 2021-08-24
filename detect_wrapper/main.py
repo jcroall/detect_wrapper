@@ -94,7 +94,7 @@ def run_detect(jarfile, runargs):
 
 
 def main():
-    print('\nINFO: Running detect_wrapper - Version 0.11beta\n')
+    print(f'\nINFO: Running detect_wrapper - Version {globals.version}\n')
 
     now = datetime.datetime.utcnow()
     bd, args = init.init()
@@ -133,6 +133,12 @@ def main():
     allcomps = data.get_comps(bd, pvurl)
     allcomps, allpols, comp_pol_list = data.get_pols(bd, allcomps)
     latestvulns, latestcomps, latestpols = data.proc_journals(bd, pvurl, vername, now, allvulns, allcomps, allpols)
+
+    if globals.auto_last_scan:
+        if len(latestcomps) == len(allcomps):
+            globals.last_scan_only = False
+        else:
+            globals.last_scan_only = True
 
     if globals.last_scan_only:
         topcomps, newcomps = data.get_top10_comps(latestvulns, latestcomps, latestpols)
