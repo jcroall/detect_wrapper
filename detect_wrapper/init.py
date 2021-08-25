@@ -49,6 +49,7 @@ wrapper_help = [
     ':\t\t\t\t\t\tPrint this help',
 ]
 
+
 def check_connection(url):
     # import subprocess
     try:
@@ -97,13 +98,14 @@ def check_prereqs():
                         major, minor, _ = version_string.split('.')
                         if prog == "openjdk":
                             crit = False
-                            if major == "8" or major == "11" or major == "13" or major == "15":
+                            if major == "8" or major == "11" or major == "13" or major == "15" or major == "16":
                                 pass
                             else:
                                 return "Java version is not supported"
                         elif prog == "java":
                             crit = False
-                            if major == "1" and (minor == "8" or minor == "11" or minor == "13" or minor == "15"):
+                            if major == "1" and (minor == "8" or minor == "11" or minor == "13" or minor == "15" or
+                                                 minor == "16"):
                                 pass
                             else:
                                 return "Java version is not supported"

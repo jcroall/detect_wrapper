@@ -167,13 +167,13 @@ def main():
                 output.output_junit_vulns(bd.base_url, globals.junit_xml, allvulns)
 
     if globals.report_html != '':
-        output.output_html_report(globals.report_html,
+        output.output_report(globals.report_html, 'html',
                                   allcomps, latestcomps, topcomps, newcomps,
                                   allvulns, latestvulns, topvulns,
                                   projname, vername, pvurl, title, globals.last_scan_only)
 
     if globals.report_text:
-        output.output_text_report('',
+        output.output_report('', 'text',
                                   allcomps, latestcomps, topcomps, newcomps,
                                   allvulns, latestvulns, topvulns,
                                   projname, vername, pvurl, title, globals.last_scan_only)

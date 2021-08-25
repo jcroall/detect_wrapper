@@ -1,7 +1,7 @@
 # import pandas as pd
 # import plotly.express as px
 # import plotly.io as pio
-import tempfile
+# import tempfile
 from dominate import document
 from dominate.util import raw
 from dominate.tags import *
@@ -567,7 +567,7 @@ def output_console_report(comps, vulns, pols, latestcomps, latestvulns, latestpo
         lcomps_violation,
     )
 
-    if len(latestcomps) > 0 and len(latestcomps) < len(comps):
+    if 0 < len(latestcomps) < len(comps):
         lastcompsstring += '''
     - Last Scan - Added components:
         - {}
@@ -616,42 +616,83 @@ def create_table(data, hdrs, fmt):
     return outtab
 
 
-def output_html_report(fname,
-                       comps, lcomps, topcomps, newcomps,
-                       vulns, lvulns, topvulns,
-                       proj, ver, pvurl, title, last_scan):
+def output_report(fname, fmt,
+                  comps, lcomps, topcomps, newcomps,
+                  vulns, lvulns, topvulns,
+                  proj, ver, pvurl, title, last_scan):
+
     if title == '':
         title = '(Full Project)'
-    d = document(title='Black Duck OSS Report - {}/{} {}'.format(proj, ver, title))
 
-    with d.head:
-        style('''
-        table, th, td{
-          border: 1px solid black;
-          border-collapse: collapse;
-          padding: 4px;
-          text-align: left;
-          font-family: Arial, sans-serif;
-        }
-        tr:hover {background-color: #F5F5F5;}
-        th {
-          background-color: #4B0082;
-          color: white;
-        }
-        h2 {
-            background-color: #9370DB;
-            color: white;
-        }
-        h1, h2, h3 {
-          font-family: Arial, sans-serif;
-        }''')
-    d += h1(a('Project: {} - Version: {} {}'.format(proj, ver, title), href=pvurl, target='_blank'))
-    d += h2('COMPONENTS')
-    d += h3('Component Counts and Highest Policy Violation')
-    d += raw(create_table(data.get_comp_counts(comps, lcomps),
-                          ['Scope', 'Total', 'Direct'] + globals.polsevs,
-                          'html').replace(
-        '<table>', '''<table>
+    def heading1(txt, link, hfmt):
+        if hfmt == 'html':
+            return h1(a(txt, href=link, target='_blank'))
+        else:
+            return txt + '\n'
+
+    def heading2(txt, hfmt):
+        if hfmt == 'html':
+            return h2(txt)
+        else:
+            return txt + '\n'
+
+    def heading3(txt, hfmt):
+        if hfmt == 'html':
+            return h3(txt)
+        else:
+            return txt + '\n'
+
+    def para(txt, pfmt):
+        if pfmt == 'html':
+            return p(txt)
+        else:
+            return txt + '\n'
+
+    if fmt == 'html':
+        brk = br()
+    else:
+        brk = '\n'
+
+    if fmt == 'html':
+        out = document(title='Black Duck OSS Report - {}/{} {}'.format(proj, ver, title))
+        with out.head:
+            style('''
+            table, th, td{
+              border: 1px solid black;
+              border-collapse: collapse;
+              padding: 4px;
+              text-align: left;
+              font-family: Arial, sans-serif;
+            }
+            tr:hover {background-color: #F5F5F5;}
+            th {
+              background-color: #4B0082;
+              color: white;
+            }
+            h2 {
+                background-color: #9370DB;
+                color: white;
+            }
+            h1, h2, h3 {
+              font-family: Arial, sans-serif;
+            }''')
+    elif fmt == 'text':
+        out = '\n==========================================================================================================\n'
+        out += 'CONSOLE REPORT\n'
+    else:
+        out = ''
+
+    out += heading1('Project: {} - Version: {} {}'.format(proj, ver, title), pvurl, fmt)
+    out += brk
+    out += heading2('COMPONENTS', fmt)
+    out += heading3('Component Counts and Highest Policy Violation', fmt)
+
+    tab = create_table(data.get_comp_counts(comps, lcomps),
+                       ['Scope', 'Total', 'Direct'] + globals.polsevs,
+                       fmt)
+    if fmt == 'html':
+        out += raw(tab.replace(
+            '<table>', '''<table>
   <colgroup>
   	<col span="4">
     <col span="2" style="background-color: yellow">
@@ -659,41 +700,62 @@ def output_html_report(fname,
     <col style="background-color: red">
     <col style="background-color: #B22222;">
   </colgroup>'''))
-    d += br()
+    else:
+        out += tab
+    out += brk
+
+    tabfmt = fmt
+    if fmt == 'html':
+        tabfmt = 'unsafehtml'
 
     if len(newcomps) > 0 and last_scan:
         t = []
         for j in newcomps:
             # find compurl from allcomps
             cstring = j['compname']
-            for c in comps:
-                if 'componentVersionName' not in c:
-                    continue
-                cname = c['componentName'] + '/' + c['componentVersionName']
-                if j['compname'] == cname:
-                    cstring = '<a href="{}" target="_blank">{}</a>'.format(c['componentVersion'], cstring)
+            if fmt == 'html':
+                for c in comps:
+                    if 'componentVersionName' not in c:
+                        continue
+                    cname = c['componentName'] + '/' + c['componentVersionName']
+                    if j['compname'] == cname:
+                        cstring = '<a href="{}" target="_blank">{}</a>'.format(c['componentVersion'], cstring)
             t.append([cstring, j['pols'], j['vulns'], j['matches_direct']])
-        d += h3('Directly Added Components - First 10 ' + title)
-        d += raw(create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'unsafehtml'))
-    # else:
-    #     d += h3('Directly Added Components - Direct Matches')
-    #     d += p('None')
+
+        out += heading3('Directly Added Components - First 10 ' + title, fmt)
+
+        tab = create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], tabfmt)
+        if fmt == 'html':
+            out += raw(tab)
+        else:
+            out += tab
 
     if len(topcomps) > 0:
         t = []
         for j in topcomps:
-            t.append(['<a href="{}" target="_blank">{}</a>'.format(j['compurl'],j['compname']),
-                      j['pols'], j['vulns'], j['matches']])
-        d += h3('Top 10 Components with Issues ' + title)
-        d += raw(create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'unsafehtml'))
+            if fmt == 'html':
+                comp = '<a href="{}" target="_blank">{}</a>'.format(j['compurl'], j['compname'])
+            else:
+                comp = j['compname']
+            t.append([comp, j['pols'], j['vulns'], j['matches']])
+        out += brk
+        out += heading3('Top 10 Components with Issues ' + title, fmt)
+        tab = create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], tabfmt)
+        if fmt == 'html':
+            out += raw(tab)
+        else:
+            out += tab
     else:
-        d += h3('Top 10 Components with Issues ' + title)
-        d += p('None')
+        out += heading3('Top 10 Components with Issues ' + title, fmt)
+        out += para('None', fmt)
 
-    d += br()
-    d += h2('VULNERABILITIES')
-    d += raw(create_table(data.get_vuln_counts(vulns, lvulns),
-                          ['Scope', 'LOW', 'MED', 'HIGH', 'CRIT'], 'html').replace(
+    out += brk
+    out += heading2('VULNERABILITIES', fmt)
+    tab = create_table(data.get_vuln_counts(vulns, lvulns),
+                          ['Scope', 'LOW', 'MED', 'HIGH', 'CRIT'], tabfmt)
+
+    if fmt == 'html':
+        out += raw(tab.replace(
         '<table>', '''<table>
   <colgroup>
   	<col>
@@ -702,6 +764,8 @@ def output_html_report(fname,
     <col style="background-color: red">
     <col style="background-color: #B22222;">
   </colgroup>'''))
+    else:
+        out += tab + brk
 
     # if len(vulns) > 0:
     #     if last_scan:
@@ -714,148 +778,38 @@ def output_html_report(fname,
     newvulnlist = topvulns
     t = []
     for v in newvulnlist:
+        if fmt == 'html':
+            vuln = '<a href="{}" target="_blank">{}</a>'.format(v['vulnurl'], v['vulnid'], )
+        else:
+            vuln = v['vulnid']
         t.append([
-            '<a href="{}" target="_blank">{}</a>'.format(v['vulnurl'], v['vulnid'],),
+            vuln,
             v['sev'],
             v['comps'],
             v['desc'],
         ])
-    d += br()
+    out += brk
+    out += heading3('Top 10 Vulnerabilities ' + title, fmt)
     if len(topvulns) > 0:
-        d += h3('Top 10 Vulnerabilities ' + title)
-        d += raw(create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], 'unsafehtml').replace(
-        '<table>', '''<table>
+        tab = create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], 'unsafehtml')
+        if fmt == 'html':
+            out += raw(tab.replace(
+                '<table>', '''<table>
   <colgroup>
   	<col style="width: 200px">
     <col>
     <col>
   </colgroup>'''))
+        else:
+            out += tab
     else:
-        d += h3('Top 10 Vulnerabilities ' + title)
-        d += p('None')
-
-    f = open(fname, "w")
-    f.write(d.render())
-    f.close()
-    print("INFO: detect_wrapper - HTML report written to file '{}'".format(fname))
-
-
-def output_text_report(fname,
-                       comps, lcomps, topcomps, newcomps,
-                       vulns, lvulns, topvulns,
-                       proj, ver, pvurl, title, last_scan):
-    if title == '':
-        title = '(Full Project)'
-
-    txt = '\n==========================================================================================================\n'
-    txt += 'CONSOLE REPORT\nProject: {} - Version: {} {}\n\n'.format(proj, ver, title)
-    txt += 'COMPONENTS\n\n'
-    txt += 'Component Counts and Highest Policy Violation\n'
-    txt += create_table(data.get_comp_counts(comps, lcomps),
-                          ['Scope', 'Total', 'Direct'] + globals.polsevs,
-                          'fancy_grid')
-    txt += '\n\n'
-
-    if len(newcomps) > 0 and last_scan:
-        t = []
-        for j in newcomps:
-            # find compurl from allcomps
-            cstring = j['compname']
-            for c in comps:
-                if 'componentVersionName' not in c:
-                    continue
-                cname = c['componentName'] + '/' + c['componentVersionName']
-                # if j['compname'] == cname:
-                #     cstring = '<a href="{}" target="_blank">{}</a>'.format(c['componentVersion'], cstring)
-            t.append([cstring, j['pols'], j['vulns'], j['matches_direct']])
-        txt += 'Directly Added Components - First 10 ' + title + '\n'
-        txt += create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'fancy_grid')
-    else:
-        txt += 'Directly Added Components ' + title + '\n'
-        txt += 'None'
-
-    if len(topcomps) > 0:
-        t = []
-        for j in topcomps:
-            t.append([j['compname'], j['pols'], j['vulns'], j['matches']])
-        txt += '\n\nTop 10 Components with Issues ' + title + '\n'
-        txt += create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], 'fancy_grid')
-    else:
-        txt += '\n\nTop 10 Components with Issues ' + title + '\n'
-        txt += 'None'
-
-    txt += '\n\nVULNERABILITIES\n\n'
-    txt += create_table(data.get_vuln_counts(vulns, lvulns),
-                        ['Scope', 'LOW', 'MED', 'HIGH', 'CRIT'], 'fancy_grid')
-
-    # if len(vulns) > 0:
-    #     if last_scan:
-    #         barname = 'Vulnerabilities ' + title
-    #         d += raw(create_summary_vulnfig(lvulns, barname))
-    #     else:
-    #         barname = 'All Vulnerabilities'
-    #         d += raw(create_summary_vulnfig(vulns, barname))
-
-    newvulnlist = topvulns
-    t = []
-    for v in newvulnlist:
-        t.append([
-            # '<a href="{}" target="_blank">{}</a>'.format(v['vulnurl'], v['vulnid'], ),
-            v['vulnid'],
-            v['sev'],
-            v['comps'],
-            v['desc'],
-        ])
-
-    if len(topvulns) > 0:
-        txt += '\n\nTop 10 Vulnerabilities ' + title + '\n'
-        txt += create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], 'fancy_grid')
-    else:
-        txt += '\n\nTop 10 Vulnerabilities ' + title + '\n'
-        txt += 'None\n'
-    txt += '\n=========================================================================================================\n'
-
-    print(txt)
-
-
-def output_text_report_old(fname,
-                       comps, lcomps, topcomps,
-                       newcomps, vulns, lvulns,
-                       topvulns, proj, ver, pvurl, title,
-                       lastscan):
-    text = '\nProject: {} - Version: {}\n\n'.format(proj, ver)
-    text += create_table(data.get_comp_counts(comps, lcomps), ['COMPONENTS', 'Total', 'In Violation'], 'simple')
-
-    newcomplist = topcomps
-    for j in newcomplist:
-        if 'polsev' in j:
-            del j['polsev']
-        if 'vulnsev' in j:
-            del j['vulnsev']
-
-    t = []
-    for d in newcomplist:
-        t.append(list(d.values()))
-    text += '\n\n' + create_table(t, ['Top 10 Comps w. Issues ' + title, 'Policies', 'Top Vulns'], 'simple')
-
-    text += '\n\n' + create_table(data.get_vuln_counts(vulns, lvulns),
-                                  ['VULNERABILITIES', 'CRIT', 'HIGH', 'MED', 'LOW'],
-                                  'simple')
-
-    newvulnlist = topvulns
-    for j in newvulnlist:
-        j['desc'] = j['desc'][:80]
-
-    t = []
-    for d in newvulnlist:
-        t.append(list(d.values()))
-
-    text += '\n\n' + create_table(t, ['Top 10 Vulns ' + title, 'Score', 'Comps', 'Description'], 'simple')
+        out += para('None', fmt)
 
     if fname != '':
         f = open(fname, "w")
-        f.write(text)
+        f.write(out.render())
         f.close()
-        print("INFO: detect_wrapper - Text report written to file '{}'".format(fname))
-    else:
-        print(text)
+        print("INFO: detect_wrapper - Report written to file '{}'".format(fname))
+    elif fmt == 'text':
+        out += '==========================================================================================================\n'
+        print(out)

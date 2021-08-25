@@ -1,4 +1,4 @@
-version = '0.12Beta'
+version = '0.14Beta'
 last_scan_only = False
 auto_last_scan = False
 wait_for_scan = False
