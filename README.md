@@ -67,7 +67,7 @@ RAPID scanning is also not (yet) supported.
 
 By default, Detect_wrapper reports results and policy violations for the full project version, but the `--wrapper.last_scan_only` option will focus only on the changes identified in the most recent scan. The option `--wrapper.auto_last_scan` will produce a full report for the first scan, but will produce last scan only data for all subsequent scans in a project version.
 
-When `--wrapper.last_scan_only` is specified, policy violations are calculated **only for the components added in the last scan**. This changes the default behaviour of Detect which will report all policy violations across the whole project. 
+When `--wrapper.last_scan_only` is specified (or when `--wrapper.auto_last_scan` runs a last scan only), policy violations are calculated **only for the components added in the last scan**. This changes the default behaviour of Detect which will report all policy violations across the whole project. 
 
 # UNDERSTANDING REPORTS
 
@@ -95,3 +95,25 @@ Use the Detect_wrapper option `--wrapper.no_defaults` to bypass the use of serve
 
 Note that the DETECT_DEFAULT_OPTIONS project must be readable by all scanning users for default options to be supported.
 
+# INTEGRATION IN GITHUB
+
+Detect_wrapper can be used in Github Actions by installing the program as a prerequisite. The following YML snippet shows how to install Python and Detect_wrapper, run a scan, store an output HTML report as an artifact and publish unit test results for SCA data.
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip3 install -i https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple detect_wrapper
+      - name: Run Detect_Wrapper
+        run: |
+          detect_wrapper --blackduck.url=https://SERVER --blackduck.api.token=API_TOKEN --blackduck.trust.cert=true \
+	  --wrapper.report_html=sca_report.html --wrapper.report_text --wrapper.junit_xml=sca_results.xml
+      - uses: actions/upload-artifact@v2
+        with:
+          name: my-artifact
+          path: sca_report.html
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v2
+        with:
+          report_paths: '**/sca_results.xml'
+          check_name: 'Black Duck SCA Scan Results'
+          github_token: ${{ secrets.GITHUB_TOKEN }}
