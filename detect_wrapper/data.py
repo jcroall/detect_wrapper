@@ -156,11 +156,13 @@ def proc_events(eventlist, ovulns, ocomps, opols):
 
     comps = []
     for ocomp in ocomps:
-        for newcomp in newcomps:
-            if ocomp['origins'][0]['externalNamespace'] == newcomp['originnamespace'] and \
-                    ocomp['origins'][0]['externalId'] == newcomp['originid']:
-                comps.append(ocomp)
-                break
+        if len(ocomp['origins']) > 0 and 'externalId' in ocomp['origins'][0] and \
+                'externalNamespace' in ocomp['origins'][0]:
+            for newcomp in newcomps:
+                if ocomp['origins'][0]['externalNamespace'] == newcomp['originnamespace'] and \
+                        ocomp['origins'][0]['externalId'] == newcomp['originid']:
+                    comps.append(ocomp)
+                    break
 
     newpols_dict = {}
     for pol in newpols:

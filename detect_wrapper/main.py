@@ -166,14 +166,20 @@ def main():
             elif len(allvulns) > 0:
                 output.output_junit_vulns(bd.base_url, globals.junit_xml, allvulns)
 
+    if globals.report_text:
+        output.output_report('', 'text',
+                                  allcomps, latestcomps, topcomps, newcomps,
+                                  allvulns, latestvulns, topvulns,
+                                  projname, vername, pvurl, title, globals.last_scan_only)
+
     if globals.report_html != '':
         output.output_report(globals.report_html, 'html',
                                   allcomps, latestcomps, topcomps, newcomps,
                                   allvulns, latestvulns, topvulns,
                                   projname, vername, pvurl, title, globals.last_scan_only)
 
-    if globals.report_text:
-        output.output_report('', 'text',
+    if globals.report_markdown != '':
+        output.output_report(globals.report_markdown, 'md',
                                   allcomps, latestcomps, topcomps, newcomps,
                                   allvulns, latestvulns, topvulns,
                                   projname, vername, pvurl, title, globals.last_scan_only)
@@ -181,7 +187,7 @@ def main():
     if len(globals.fail_on_policies) > 0 and globals.last_scan_only:
         for pol in latestpols.keys():
             if latestpols[pol]['polsev'] in globals.fail_on_policies:
-                print('INFO: detect_wrapper - Policy violated for components added in latest scan')
+                print('INFO: detect_wrapper - Policies violated for components added in latest scan')
                 sys.exit(1)
 
 

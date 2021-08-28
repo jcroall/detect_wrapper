@@ -28,6 +28,7 @@ wrapper_opts = [
     '--wrapper.auto_last_scan',
     '--wrapper.report_text',
     '--wrapper.report_html',
+    '--wrapper.report_markdown',
     '--wrapper.junit_xml',
     '--wrapper.junit_type',
     '--wrapper.detect_jar',
@@ -40,8 +41,9 @@ wrapper_help = [
     ':\t\t\tReport (calculate policy violations) on the last scan only',
     ':\t\t\tFor first scan, report on full scan otherwise report (calculate policy violations) on the last scan only',
     ':\t\t\t\tOutput console text report',
-    '=out.html:\t\tOutput HTML file (out.html)',
-    ':\t\t\t\tOutput Junit XML (default policy violations for full scan)',
+    '=out.html:\t\tOutput report as HTML file (out.html)',
+    '=markdown.md:\tOutput report as markdown file (markdown.md',
+    '=out.xml:\t\t\tOutput Junit XML (default policy violations) to file (out.xml)',
     '=[comps|vulns|pols]:\tOutput Junit XML data for components, vulnerabilities or policies',
     '=detect.jar:\tSpecify existing Detect jar file (detect.jar)',
     ':\t\t\t\tIgnore scan options stored on server in DETECT_DEFAULT_OPTIONS project (notes fields within versions)',
@@ -239,6 +241,10 @@ def check_all_options():
         elif key == '--wrapper.report_html':
             globals.report_html = val
             print('INFO: detect_wrapper - Will output report to HTML file {}'.format(globals.report_html))
+            report = True
+        elif key == '--wrapper.report_markdown':
+            globals.report_markdown = val
+            print('INFO: detect_wrapper - Will output report to markdown file {}'.format(globals.report_markdown))
             report = True
         elif key == '--wrapper.junit_xml':
             globals.junit_xml = val

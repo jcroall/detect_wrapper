@@ -624,21 +624,33 @@ def output_report(fname, fmt,
     if title == '':
         title = '(Full Project)'
 
+    tabfmt = fmt
+    if fmt == 'html':
+        tabfmt = 'unsafehtml'
+    elif fmt == 'md':
+        tabfmt = 'github'
+
     def heading1(txt, link, hfmt):
         if hfmt == 'html':
             return h1(a(txt, href=link, target='_blank'))
+        elif hfmt == 'md':
+            return '# ' + txt + '\n'
         else:
             return txt + '\n'
 
     def heading2(txt, hfmt):
         if hfmt == 'html':
             return h2(txt)
+        elif hfmt == 'md':
+            return '## ' + txt + '\n'
         else:
             return txt + '\n'
 
     def heading3(txt, hfmt):
         if hfmt == 'html':
             return h3(txt)
+        elif hfmt == 'md':
+            return '### ' + txt + '\n'
         else:
             return txt + '\n'
 
@@ -651,7 +663,7 @@ def output_report(fname, fmt,
     if fmt == 'html':
         brk = br()
     else:
-        brk = '\n'
+        brk = '\n\n'
 
     if fmt == 'html':
         out = document(title='Black Duck OSS Report - {}/{} {}'.format(proj, ver, title))
@@ -689,7 +701,7 @@ def output_report(fname, fmt,
 
     tab = create_table(data.get_comp_counts(comps, lcomps),
                        ['Scope', 'Total', 'Direct'] + globals.polsevs,
-                       fmt)
+                       tabfmt)
     if fmt == 'html':
         out += raw(tab.replace(
             '<table>', '''<table>
@@ -703,10 +715,6 @@ def output_report(fname, fmt,
     else:
         out += tab
     out += brk
-
-    tabfmt = fmt
-    if fmt == 'html':
-        tabfmt = 'unsafehtml'
 
     if len(newcomps) > 0 and last_scan:
         t = []
@@ -730,6 +738,7 @@ def output_report(fname, fmt,
         else:
             out += tab
 
+    out += brk
     if len(topcomps) > 0:
         t = []
         for j in topcomps:
@@ -738,7 +747,6 @@ def output_report(fname, fmt,
             else:
                 comp = j['compname']
             t.append([comp, j['pols'], j['vulns'], j['matches']])
-        out += brk
         out += heading3('Top 10 Components with Issues ' + title, fmt)
         tab = create_table(t, ['Name', 'Policies', 'Top Vulns', 'Where Found'], tabfmt)
         if fmt == 'html':
@@ -765,7 +773,7 @@ def output_report(fname, fmt,
     <col style="background-color: #B22222;">
   </colgroup>'''))
     else:
-        out += tab + brk
+        out += tab
 
     # if len(vulns) > 0:
     #     if last_scan:
@@ -791,7 +799,7 @@ def output_report(fname, fmt,
     out += brk
     out += heading3('Top 10 Vulnerabilities ' + title, fmt)
     if len(topvulns) > 0:
-        tab = create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], 'unsafehtml')
+        tab = create_table(t, ['Vuln ID', 'Score', 'Comps', 'Description'], tabfmt)
         if fmt == 'html':
             out += raw(tab.replace(
                 '<table>', '''<table>
@@ -807,7 +815,10 @@ def output_report(fname, fmt,
 
     if fname != '':
         f = open(fname, "w")
-        f.write(out.render())
+        if fmt == 'html':
+            f.write(out.render())
+        elif fmt == 'md':
+            f.write(out)
         f.close()
         print("INFO: detect_wrapper - Report written to file '{}'".format(fname))
     elif fmt == 'text':

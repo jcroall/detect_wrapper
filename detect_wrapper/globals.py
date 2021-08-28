@@ -1,9 +1,10 @@
-version = '0.14Beta'
+version = '0.15Beta'
 last_scan_only = False
 auto_last_scan = False
 wait_for_scan = False
 report_text = False
 report_html = ''
+report_markdown = ''
 junit_xml = ''
 junit_type = 'pols'
 # output_sarif = ''
