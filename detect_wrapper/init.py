@@ -320,9 +320,9 @@ def init():
 
     args = check_all_options()
 
-    if not check_connection("https://detect.synopsys.com"):
-        print('ERROR: detect_wrapper - No connection to https://detect.synopsys.com (Proxy issue?)')
-        sys.exit(2)
+    # if not check_connection("https://detect.synopsys.com"):
+    #     print('ERROR: detect_wrapper - No connection to https://detect.synopsys.com (Proxy issue?)')
+    #     sys.exit(2)
     if not check_connection("https://sig-repo.synopsys.com"):
         print('ERROR: detect_wrapper - No connection to https://sig-repo.synopsys.com (Proxy issue?)')
         sys.exit(2)

@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="detect_wrapper",
-    version="0.13-Beta",
+    version="0.15-Beta",
     author="Matthew Brady",
     author_email="w3matt@gmail.com",
     description="Python wrapper for Synopsys Detect with XML and HTML outputs.",
