@@ -99,6 +99,18 @@ Note that the DETECT_DEFAULT_OPTIONS project must be readable by all scanning us
 
 Detect_wrapper can be used in Github Actions by installing the program as a prerequisite. The following YML snippet shows how to install Python and Detect_wrapper, run a scan, store an output HTML report as an artifact and publish unit test results for SCA data.
 
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
