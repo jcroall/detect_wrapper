@@ -172,6 +172,14 @@ def main():
                                   allvulns, latestvulns, topvulns,
                                   projname, vername, pvurl, title, globals.last_scan_only)
 
+
+    # Generate GitLab Advanced Security output
+    if globals.report_gitlab != '':
+        output.output_gitlab(globals.report_gitlab,
+                                  allcomps, latestcomps, topcomps, newcomps,
+                                  allvulns, latestvulns, topvulns,
+                                  projname, vername, pvurl, title, globals.last_scan_only)
+
     if globals.report_html != '':
         output.output_report(globals.report_html, 'html',
                                   allcomps, latestcomps, topcomps, newcomps,

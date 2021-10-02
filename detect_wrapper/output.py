@@ -406,6 +406,80 @@ def create_summary_compfig(comps, lcomps):
     return data
     '''
 
+def output_gitlab(fname,
+                  comps, lcomps, topcomps, newcomps,
+                  vulns, lvulns, topvulns,
+                  proj, ver, pvurl, title, last_scan):
+
+    vulnerabilities = []
+
+    for vuln in vulns:
+        vulnerability = dict()
+        vulnerability['id'] = vuln['vulnerabilityWithRemediation']['vulnerabilityName'] + "-" + vuln['componentVersionOriginId']
+        vulnerability['category'] = "dependency_scanning"
+        #vulnerability['message'] = vuln['vulnerabilityWithRemediation']['vulnerabilityName']
+        vulnerability['message'] = vuln['vulnerabilityWithRemediation']['description']
+        vulnerability['description'] = vuln['vulnerabilityWithRemediation']['description']
+        vulnerability['severity'] = vuln['vulnerabilityWithRemediation']['severity']
+        vulnerability['solution'] = "Upgrade to fixed version."
+        scanner = dict()
+        scanner['id'] = "blackduck"
+        scanner['name'] = "Synopsys Black Duck"
+        vulnerability['scanner'] = scanner
+
+        location = dict()
+        if vuln['componentVersionOriginName'] == "npmjs":
+            location['file'] = "package.json"
+        elif vuln['componentVersionOriginName'] == "maven":
+            location['file'] = "pom.xml"
+        else:
+            location['file'] = "Unknown"
+        dependency = dict()
+        dependencyPackage = dict()
+        dependencyPackage['name'] = vuln['componentName']
+        dependency['package'] = dependencyPackage
+        dependency['version'] = vuln['componentVersionName']
+        location['dependency'] = dependency
+
+        vulnerability['location'] = location
+
+        identifiers = []
+        identifier = dict()
+        identifier['type'] = "blackduck"
+        if vuln['vulnid'].startswith("BDSA"):
+            identifier['type'] = "bdsa"
+        elif vuln['vulnid'].startswith("CVE"):
+            identifier['type'] = "cve"
+        else:
+            identifier['type'] = "unknown"
+        identifier['name'] = vuln['vulnid']
+        identifier['value'] = vuln['vulnerabilityWithRemediation']['description']
+        identifier['url'] = vuln['componentVersion']
+        identifiers.append(identifier)
+        vulnerability['identifiers'] = identifiers
+
+        links = []
+        link = dict()
+        link['url'] = vuln['componentVersion']
+        links.append(link)
+        vulnerability['links'] = links
+
+        vulnerabilities.append(vulnerability)
+
+        #print("DEBUG: Vulnerability:")
+        #print(vuln)
+
+    dependency_scan_report = dict()
+    dependency_scan_report['version'] = "2.0"
+    dependency_scan_report['vulnerabilities'] = vulnerabilities
+    #dependency_scan_report['remediations'] = remediations
+
+    print("DEBUG: Dumping scan report")
+    print(json.dumps(dependency_scan_report, indent=4, sort_keys=True))
+    with open(fname, "w") as fp:
+      json.dump(dependency_scan_report, fp, indent=4)
+
+    print("GitLab Advanced Security output file '{}' written with vulnerability data".format(fname))
 
 def output_junit_vulns(bdurl, output, vulns):
     f = open(output, "w")

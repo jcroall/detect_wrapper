@@ -29,6 +29,7 @@ wrapper_opts = [
     '--wrapper.report_text',
     '--wrapper.report_html',
     '--wrapper.report_markdown',
+    '--wrapper.report_gitlab',
     '--wrapper.junit_xml',
     '--wrapper.junit_type',
     '--wrapper.detect_jar',
@@ -42,7 +43,8 @@ wrapper_help = [
     ':\t\t\tFor first scan, report on full scan otherwise report (calculate policy violations) on the last scan only',
     ':\t\t\t\tOutput console text report',
     '=out.html:\t\tOutput report as HTML file (out.html)',
-    '=markdown.md:\tOutput report as markdown file (markdown.md',
+    '=markdown.md:\tOutput report as markdown file (markdown.md)',
+    '=gl-dependency-scanning-report-bd.json:\tOutput report as GitHub Advanced Security JSON (gl-dependency-scanning-report-bd.json)',
     '=out.xml:\t\t\tOutput Junit XML (default policy violations) to file (out.xml)',
     '=[comps|vulns|pols]:\tOutput Junit XML data for components, vulnerabilities or policies',
     '=detect.jar:\tSpecify existing Detect jar file (detect.jar)',
@@ -245,6 +247,10 @@ def check_all_options():
         elif key == '--wrapper.report_markdown':
             globals.report_markdown = val
             print('INFO: detect_wrapper - Will output report to markdown file {}'.format(globals.report_markdown))
+            report = True
+        elif key == '--wrapper.report_gitlab':
+            globals.report_gitlab = val
+            print('INFO: detect_wrapper - Will output report to GitLab Advanced Security JSON {}'.format(globals.report_gitlab))
             report = True
         elif key == '--wrapper.junit_xml':
             globals.junit_xml = val
